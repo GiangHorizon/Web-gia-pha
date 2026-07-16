@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add Member</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+  </head>
+
+  <body class="bg-gray-100">
+    <div class="max-w-4xl mx-auto bg-white min-h-screen border p-6">
+      <div class="border-b pb-3 mb-5">
+        <a href="member.html" class="text-sm text-gray-600 hover:text-black">
+          <i class="fas fa-arrow-left mr-2"></i>Back
+        </a>
+      </div>
+
+      <form id="addMemberForm" class="space-y-5">
+        <div class="grid grid-cols-12 items-center gap-4">
+          <label class="col-span-3 text-sm font-medium">
+            Full Name <span class="text-red-500">*</span>
+          </label>
+          <div class="col-span-9">
+            <input
+              id="name"
+              type="text"
+              placeholder="Enter full name"
+              required
+              class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-gray-400"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 items-center gap-4">
+          <label class="col-span-3 text-sm font-medium">
+            Gender <span class="text-red-500">*</span>
+          </label>
+          <div class="col-span-9">
+            <select
+              id="gender"
+              class="w-full border rounded px-3 py-2 focus:outline-none"
+              required
+            >
+              <option value="">Select gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-12 items-center gap-4">
+          <label class="col-span-3 text-sm font-medium">Date of Birth</label>
+          <div class="col-span-9">
+            <input
+              id="date_birth"
+              type="date"
+              class="w-full border rounded px-3 py-2"
+            />
+          </div>
+        </div>
+        <div class="grid grid-cols-12 items-center gap-4">
+          <label class="col-span-3 text-sm font-medium"
+            >Date of Death (if applicable)</label
+          >
+          <div class="col-span-9">
+            <input
+              id="date_death"
+              type="date"
+              class="w-full border rounded px-3 py-2"
+            />
+          </div>
+        </div>
+        <div class="grid grid-cols-12 items-start gap-4 relative">
+          <label class="col-span-3 text-sm font-medium pt-2">
+            Dad/Mom <span class="text-red-500">*</span>
+          </label>
+
+          <div class="col-span-9 relative">
+            <input
+              type="text"
+              id="parent-search"
+              class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Gõ tên hoặc năm sinh để tìm..."
+              autocomplete="off"
+            />
+
+            <input type="hidden" id="selected-parent-id" name="parent_id" />
+
+            <div
+              id="search-results"
+              class="hidden absolute z-50 w-full bg-white border rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto divide-y divide-gray-100"
+            ></div>
+          </div>
+        </div>
+        <div class="grid grid-cols-12 gap-4">
+          <label class="col-span-3 text-sm font-medium">Notes</label>
+          <div class="col-span-9">
+            <textarea
+              id="note"
+              rows="4"
+              placeholder="Enter notes"
+              class="w-full border rounded px-3 py-2 resize-none"
+            ></textarea>
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-8">
+          <a
+            href="member.html"
+            class="px-6 py-2 border rounded hover:bg-gray-100 inline-flex items-center"
+          >
+            Cancel
+          </a>
+          <button
+            type="submit"
+            class="px-6 py-2 bg-gray-700 text-white rounded hover:bg-gray-800"
+          >
+            Save Member
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <script src="addmember.js"></script>
+  </body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member List - Family Tree</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+
+<body class="bg-gray-100">
+
+    <div class="flex min-h-screen">
+
+    <aside class="w-64 bg-white border-r fixed h-screen overflow-y-auto">
+        
+        <div class="h-20 flex items-center px-6 border-b">
+        <i class="fas fa-bars text-2xl cursor-pointer"></i>
+        <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2 ml-5">
+                    Family Tree
+                </h1>
+        </div>
+
+        <nav class="p-4 space-y-2">
+        <a href="/public/mainpage/index.html" class="flex items-center gap-3 px-4 py-3 rounded-xl  font-medium">
+            <i class="fas fa-house"></i> Home
+        </a>
+        <a href="/public/list/member.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 text-blue-600 hover:bg-gray-100">
+            <i class="fas fa-users"></i> Members
+        </a>
+        <a href="/public/relationships/relationships.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
+            <i class="fas fa-link"></i> Relationships
+        </a>
+        <a href="/public/statistics/statistics.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
+            <i class="fas fa-chart-column"></i> Statistics
+        </a>
+        <a href="/public/documents/documents.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
+            <i class="fas fa-file"></i> Documents
+        </a>
+        <a href="/public/settings/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
+            <i class="fas fa-gear"></i> Settings
+        </a>
+        </nav>
+    </aside>
+
+        <main class="flex-1 ml-64 p-6">
+
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-3xl font-semibold text-gray-800">Member List</h2>
+
+                <a href="addMember.html" 
+                   class="bg-gray-700 hover:bg-gray-800 text-white px-5 py-2.5 rounded-lg inline-flex items-center transition-colors">
+                    <i class="fas fa-plus mr-2"></i>
+                    Add Member
+                </a>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border mb-6">
+                <div class="flex gap-4">
+                    <div class="flex-1 relative">
+                        <i class="fas fa-search absolute left-4 top-3.5 text-gray-400"></i>
+                        <input id="memberSearch" 
+                               type="text" 
+                               placeholder="Search by name..." 
+                               class="w-full pl-11 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <select id="genderFilter" 
+                            class="border rounded-xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="all">All Genders</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-left text-sm text-gray-600">
+                                <th class="p-4">Photo</th>
+                                <th class="p-4">Full Name</th>
+                                <th class="p-4">Gender</th>
+                                <th class="p-4 ">Date of Birth</th>
+                                <th class="p-4">Date of Death</th>
+                                <th class="p-4">Father</th>
+                                <th class="p-4">Mother</th>
+                                <th class="p-4 ">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memberTableBody" class="text-sm divide-y">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="flex justify-center mt-8 gap-2">
+                </div>
+
+        </main>
+    </div>
+
+    <script src="member.js"></script>
+</body>
+</html>
