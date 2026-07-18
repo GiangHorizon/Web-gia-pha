@@ -1,229 +1,332 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hồ sơ cá nhân - Gia phả Online</title>
-    <!-- Tailwind CSS CDN -->
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gia Phả Họ Nguyễn - Hồ sơ cá nhân</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts (Inter) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-    </style>
-</head>
-<body class="bg-[#f8f9fa] text-gray-800 flex min-h-screen">
-
- <aside class="w-64 bg-white border-r">
-    <div class="h-20 flex items-center px-6 border-b">
-      <i class="fas fa-bars text-2xl cursor-pointer"></i>
-    </div>
-
-    <nav class="p-4 space-y-2">
-      <a href="/public/mainpage/index.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 text-blue-600 font-medium">
-        <i class="fas fa-house"></i> Home
-      </a>
-      <a href="/public/list/member.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
-        <i class="fas fa-users"></i> Members
-      </a>
-      <a href="/public/relationships/relationships.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
-        <i class="fas fa-link"></i> Relationships
-      </a>
-      <a href="/public/statistics/statistics.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
-        <i class="fas fa-chart-column"></i> Statistics
-      </a>
-      <a href="/public/documents/documents.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
-        <i class="fas fa-file"></i> Documents
-      </a>
-      <a href="/public/settings/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
-        <i class="fas fa-gear"></i> Settings
-      </a>
-    </nav>
-  </aside>
-
-  <main class="flex-1 flex flex-col">
-    <header class="h-20 bg-white border-b flex items-center justify-between px-8">
-      <h1 class="text-3xl font-bold">GIA PHẢ HỌ NGUYỄN</h1>
-      <!--Search-->
-      <div class="flex items-center gap-5">
-        <div class="relative">
-          <i class="fas fa-search absolute left-4 top-4 text-gray-400"></i>
-          <input id="member-search" class="w-80 pl-11 py-3 rounded-full bg-slate-100" placeholder="Find members...">
+    <link rel="stylesheet" href="index.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    />
+  </head>
+  <body class="bg-slate-100">
+    <div class="flex h-screen overflow-hidden">
+      <!-- ================= SIDEBAR ================= -->
+      <aside class="w-64 bg-white border-r">
+        <div
+          id="menu-toggle"
+          class="h-20 flex items-center px-6 border-b cursor-pointer hover:bg-gray-50 transition-colors"
+        >
+          <i class="fas fa-bars text-2xl"></i>
         </div>
-      <!-- NOTIFICATION -->
-        <i class="far fa-bell text-xl cursor-pointer hover:text-gray-600"></i>
-      <!-- ADMIN DROPDOWN -->
-        <div class="relative id-admin-container">
-          <button onclick="toggleAdminDropdown(event)" class="flex items-center gap-2 hover:bg-gray-50 p-1.5 rounded-xl transition-colors duration-200">
-            <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600">
-              <i class="fas fa-user-shield"></i>
-            </div>
-            <span class="font-medium text-gray-700">Admin</span>
-            <i class="fas fa-chevron-down text-xs text-gray-400 ml-1"></i>
-          </button>
 
-          <div id="adminDropdownMenu" class="hidden absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 py-2 animate-fade-in">
-            <div class="px-4 py-2 border-b border-gray-100">
-              <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">Account</p>
-              <p class="text-sm font-semibold text-gray-800 truncate">Nguyễn Trường Giang</p>
-            </div>
+        <nav id="sidebar-nav" class="p-4 space-y-2">
+          <a
+            href="/public/mainpage/index.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100"
+          >
+            <i class="fas fa-house"></i> Home
+          </a>
+          <a
+            href="/public/list/member.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100"
+          >
+            <i class="fas fa-users"></i> Members
+          </a>
+          <a
+            href="/public/relationships/relationships.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100"
+          >
+            <i class="fas fa-link"></i> Relationships
+          </a>
+          <a
+            href="/public/statistics/statistics.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100"
+          >
+            <i class="fas fa-chart-column"></i> Statistics
+          </a>
+          <a
+            href="/public/documents/documents.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100"
+          >
+            <i class="fas fa-file"></i> Documents
+          </a>
+          <a
+            href="/public/settings/settings.html"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100"
+          >
+            <i class="fas fa-gear"></i> Settings
+          </a>
+        </nav>
+      </aside>
+
+      <!-- MAIN CONTENT AREA -->
+      <main class="flex-1 flex flex-col">
+        <!-- ================= HEADER ================= -->
+        <header
+          class="h-20 bg-white border-b flex items-center justify-between px-8"
+        >
+          <h1 class="text-3xl font-bold">GIA PHẢ HỌ NGUYỄN</h1>
+
+          <div class="flex items-center gap-5">
             
-            <div class="p-1 border-b border-gray-100">
-              <a href="/public/profile/profile.html" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors">
-                <i class="fas fa-id-card w-4 text-center text-gray-400"></i> Profile
-              </a>
-              <a href="/public/dashboard/dashboard.html" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors">
-                <i class="fas fa-sliders w-4 text-center text-gray-400"></i> Dashboard
-              </a>
-              <a href="/public/security/security.html" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors">
-                <i class="fas fa-shield-halved w-4 text-center text-gray-400"></i> Security
-              </a>
-            </div>
 
-            <div class="p-1">
-              <a href="/logout" class="flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors">
-                <i class="fas fa-right-from-bracket w-4 text-center"></i> Logout
-              </a>
+            <i
+              class="far fa-bell text-xl cursor-pointer hover:text-gray-600"
+            ></i>
+
+            <!-- ADMIN DROPDOWN -->
+            <div class="relative id-admin-container">
+              <button
+                id="admin-dropdown-btn"
+                class="flex items-center gap-2 hover:bg-gray-50 p-1.5 rounded-xl transition-colors duration-200"
+              >
+                <div
+                  class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600"
+                >
+                  <i class="fas fa-user-shield"></i>
+                </div>
+                <span class="font-medium text-gray-700 current-admin-name"
+                  >Loading...</span
+                >
+                <i class="fas fa-chevron-down text-xs text-gray-400 ml-1"></i>
+              </button>
+
+              <div
+                id="adminDropdownMenu"
+                class="hidden absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 py-2"
+              >
+                <div class="px-4 py-2 border-b border-gray-100">
+                  <p
+                    class="text-xs text-gray-400 font-medium uppercase tracking-wider"
+                  >
+                    Account
+                  </p>
+                  <p
+                    class="text-sm font-semibold text-gray-800 truncate current-admin-name"
+                  >
+                    Loading...
+                  </p>
+                </div>
+                <div class="p-1 border-b border-gray-100">
+                  <a
+                    href="/public/profile/profile.html"
+                    class="flex items-center gap-3 px-3 py-2 text-sm text-blue-600 bg-slate-50 rounded-xl"
+                  >
+                    <i class="fas fa-id-card w-4 text-center"></i> Profile
+                  </a>
+                  <a
+                    href="/public/dashboard/dashboard.html"
+                    class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-slate-50 rounded-xl"
+                  >
+                    <i class="fas fa-sliders w-4 text-center"></i> Dashboard
+                  </a>
+                </div>
+                <div class="p-1">
+                  <a
+                    href="/logout"
+                    class="flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl"
+                  >
+                    <i class="fas fa-right-from-bracket w-4 text-center"></i>
+                    Logout
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-    </header>
-        <!-- WORKSPACE CONTENT -->
-        <section class="flex-1 p-6 lg:p-8 overflow-y-auto max-w-5xl w-full mx-auto">
-            
+        </header>
+
+        <!-- ================= PROFILE CONTENT ================= -->
+        <section class="p-6 flex-1 overflow-auto">
+          <div class="bg-white rounded-2xl border p-6 min-h-full">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                
-                <!-- CỘT TRÁI: Avatar & Thông tin chung -->
-                <div class="space-y-6">
-                    <div class="bg-white rounded-xl border border-gray-200 p-6 text-center">
-                        <div class="relative w-32 h-32 mx-auto mb-4 group">
-                            <!-- Placeholder avatar style giống nét vẽ mờ trong bản vẽ -->
-                            <div class="w-full h-full rounded-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center text-gray-400 group-hover:bg-gray-50 transition overflow-hidden">
-                                <i class="fa-regular fa-user text-4xl"></i>
-                            </div>
-                            <button class="absolute bottom-1 right-1 w-8 h-8 bg-white border border-gray-200 hover:bg-gray-50 rounded-full flex items-center justify-center shadow-sm text-gray-600 transition">
-                                <i class="fa-solid fa-camera text-xs"></i>
-                            </button>
-                        </div>
-                        <h3 class="text-lg font-semibold text-gray-900">Nguyễn Trường Giang</h3>
-                        <p class="text-xs text-gray-500 mb-4">Chi thứ 3 - Đời thứ 5</p>
-                        
-                        <div class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5"></span>
-                            Tài khoản đã liên kết cây gia phả
-                        </div>
+              <!-- CỘT TRÁI -->
+              <div class="space-y-6">
+                <div class="border rounded-2xl p-6 text-center bg-slate-50/50">
+                  <div class="relative w-32 h-32 mx-auto mb-4">
+                    <div
+                      class="w-full h-full rounded-full bg-gray-200 flex items-center justify-center text-gray-400 border border-slate-300 overflow-hidden"
+                    >
+                      <i
+                        class="fas fa-user text-4xl"
+                        id="profile-avatar-placeholder"
+                      ></i>
+                      <img
+                        id="profile-avatar"
+                        class="w-full h-full object-cover hidden"
+                        src=""
+                        alt="Avatar"
+                      />
                     </div>
-
-                    <!-- Vai trò trong dòng họ / Tóm tắt hệ thống -->
-                    <div class="bg-white rounded-xl border border-gray-200 p-6">
-                        <h4 class="font-semibold text-sm text-gray-900 mb-4">Thông tin vai vế</h4>
-                        <ul class="space-y-3 text-xs">
-                            <li class="flex justify-between py-2 border-b border-gray-50">
-                                <span class="text-gray-500">Họ của dòng tộc:</span>
-                                <span class="font-medium text-gray-900">Nguyễn (Nguyễn Tộc)</span>
-                            </li>
-                            <li class="flex justify-between py-2 border-b border-gray-50">
-                                <span class="text-gray-500">Quan hệ trực hệ:</span>
-                                <span class="font-medium text-gray-900">Con trai thứ (Nam)</span>
-                            </li>
-                            <li class="flex justify-between py-2">
-                                <span class="text-gray-500">Tổ tiên trực hệ:</span>
-                                <span class="font-medium text-gray-900">Nguyễn Văn C (Đời 4)</span>
-                            </li>
-                        </ul>
-                    </div>
+                  </div>
+                  <h3 id="display-name" class="text-xl font-bold text-gray-900">
+                    ---
+                  </h3>
+                  <p id="display-role" class="text-xs text-gray-500 mt-1">
+                    ---
+                  </p>
                 </div>
 
-                <!-- CỘT PHẢI: Form Chỉnh sửa thông tin cá nhân & Gia quy -->
-                <div class="lg:col-span-2 space-y-6">
-                    
-                    <!-- Khung nhập thông tin giống Form 5 "Thêm thành viên mới" -->
-                    <div class="bg-white rounded-xl border border-gray-200 shadow-sm">
-                        <div class="p-5 border-b border-gray-100 flex items-center justify-between">
-                            <h3 class="font-semibold text-gray-900 text-sm">Chỉnh sửa hồ sơ cá nhân</h3>
-                            <span class="text-xs text-gray-400">Cập nhật lần cuối: Hôm nay</span>
-                        </div>
-                        
-                        <form class="p-6 space-y-4">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-600 mb-1.5">Họ và tên *</label>
-                                    <input type="text" value="Nguyễn Trường Giang" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition" required>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-600 mb-1.5">Giới tính *</label>
-                                    <select class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">
-                                        <option value="Nam">Nam</option>
-                                        <option value="Nữ">Nữ</option>
-                                        <option value="Khác">Khác</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-600 mb-1.5">Ngày sinh *</label>
-                                    <input type="date" value="2005-01-01" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition" required>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-medium text-gray-600 mb-1.5">Số điện thoại liên hệ</label>
-                                    <input type="tel" placeholder="0123 456 789" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1.5">Nơi sinh sống hiện tại</label>
-                                <input type="text" value="Hà Nội, Việt Nam" class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-medium text-gray-600 mb-1.5">Ghi chú cá nhân (Tiểu sử ngắn)</label>
-                                <textarea rows="3" placeholder="Ghi chú về bản thân, nghề nghiệp, đóng góp cho dòng họ..." class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-gray-400 focus:border-gray-400 transition">Sinh viên ngành CNTT. Quản trị viên hỗ trợ chuẩn hóa dữ liệu số hóa Cây Gia phả họ Nguyễn.</textarea>
-                            </div>
-
-                            <!-- Buttons (Giữ nguyên phong cách đen/trắng tối giản của nút Lưu/Hủy) -->
-                            <div class="pt-4 border-t border-gray-100 flex justify-end space-x-3">
-                                <button type="button" class="px-4 py-2 border border-gray-200 hover:bg-gray-50 rounded-lg text-xs font-medium transition">
-                                    Hủy bỏ
-                                </button>
-                                <button type="submit" class="px-5 py-2 bg-gray-900 text-white hover:bg-gray-800 rounded-lg text-xs font-medium shadow-sm transition">
-                                    Lưu thay đổi
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- PHẦN LIÊN KẾT GIA ĐÌNH (Lấy cảm hứng từ Form 4: Chi tiết thành viên) -->
-                    <div class="bg-white rounded-xl border border-gray-200 p-6">
-                        <h4 class="font-semibold text-sm text-gray-900 mb-4">Mối quan hệ gia đình trực hệ</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                            <div class="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
-                                <div>
-                                    <p class="text-gray-400">Bố đẻ (Cha)</p>
-                                    <p class="font-semibold text-gray-800 mt-0.5">Nguyễn Văn C</p>
-                                </div>
-                                <a href="#" class="text-gray-400 hover:text-gray-800"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-                            </div>
-                            <div class="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
-                                <div>
-                                    <p class="text-gray-400">Mẹ đẻ (Mẹ)</p>
-                                    <p class="font-semibold text-gray-800 mt-0.5">Lê Thị K</p>
-                                </div>
-                                <a href="#" class="text-gray-400 hover:text-gray-800"><i class="fa-solid fa-arrow-up-right-from-square"></i></a>
-                            </div>
-                        </div>
-                    </div>
-
+                <div class="border rounded-2xl p-6 bg-white">
+                  <h4 class="font-bold text-sm text-gray-900 mb-4">
+                    <i class="fas fa-circle-info mr-2 text-slate-400"></i>Hệ
+                    thống dòng tộc
+                  </h4>
+                  <ul class="space-y-3 text-xs">
+                    <li
+                      class="flex justify-between py-2 border-b border-slate-100"
+                    >
+                      <span class="text-gray-500">Thành viên liên kết:</span>
+                      <span
+                        id="sys-member-link"
+                        class="font-semibold text-gray-800"
+                        >Chưa liên kết</span
+                      >
+                    </li>
+                    <li
+                      class="flex justify-between py-2 border-b border-slate-100"
+                    >
+                      <span class="text-gray-500">Đời thứ:</span>
+                      <span
+                        id="sys-generation"
+                        class="font-semibold text-gray-800"
+                        >---</span
+                      >
+                    </li>
+                  </ul>
                 </div>
+              </div>
+
+              <!-- CỘT PHẢI: FORM CHỈNH SỬA -->
+              <div class="lg:col-span-2">
+                <div class="border rounded-2xl shadow-sm bg-white">
+                  <div
+                    class="p-5 border-b border-slate-100 flex justify-between items-center"
+                  >
+                    <h3 class="font-bold text-gray-900 text-lg">
+                      Thông tin tài khoản
+                    </h3>
+                    <span class="text-xs text-gray-400"
+                      >Dữ liệu thời gian thực</span
+                    >
+                  </div>
+
+                  <form id="profile-form" class="p-6 space-y-4">
+                    <!-- Hàng 1 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label
+                          class="block text-xs font-semibold text-gray-600 mb-2"
+                          >Họ và tên *</label
+                        >
+                        <input
+                          type="text"
+                          id="input-fullname"
+                          class="w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-slate-50"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label
+                          class="block text-xs font-semibold text-gray-600 mb-2"
+                          >Giới tính *</label
+                        >
+                        <select
+                          id="input-gender"
+                          class="w-full px-4 py-2.5 border rounded-xl text-sm bg-slate-50 focus:outline-none focus:border-blue-500"
+                        >
+                          <option value="Nam">Nam</option>
+                          <option value="Nữ">Nữ</option>
+                          <option value="Khác">Khác</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- Hàng 2 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label
+                          class="block text-xs font-semibold text-gray-600 mb-2"
+                          >Ngày sinh *</label
+                        >
+                        <input
+                          type="date"
+                          id="input-birthday"
+                          class="w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-slate-50"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label
+                          class="block text-xs font-semibold text-gray-600 mb-2"
+                          >Số điện thoại</label
+                        >
+                        <input
+                          type="tel"
+                          id="input-phone"
+                          class="w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-slate-50"
+                          placeholder="Nhập số điện thoại..."
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Hàng 3 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label
+                          class="block text-xs font-semibold text-gray-600 mb-2"
+                          >Địa chỉ Gmail</label
+                        >
+                        <input
+                          type="email"
+                          id="input-gmail"
+                          class="w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-slate-50"
+                          placeholder="example@gmail.com"
+                        />
+                      </div>
+                      <div>
+                        <label
+                          class="block text-xs font-semibold text-gray-600 mb-2"
+                          >Nơi ở hiện tại</label
+                        >
+                        <input
+                          type="text"
+                          id="input-address"
+                          class="w-full px-4 py-2.5 border rounded-xl text-sm focus:outline-none focus:border-blue-500 bg-slate-50"
+                          placeholder="Thành phố, Quốc gia..."
+                        />
+                      </div>
+                    </div>
+
+                    <!-- Nút Hành động -->
+                    <div
+                      class="pt-4 border-t border-slate-100 flex justify-end gap-3"
+                    >
+                      <button
+                        type="button"
+                        id="btn-reload"
+                        class="px-5 py-2.5 border rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+                      >
+                        Tải lại
+                      </button>
+                      <button
+                        type="submit"
+                        class="px-6 py-2.5 bg-gray-900 text-white hover:bg-gray-800 rounded-xl text-sm font-medium shadow-sm transition-colors"
+                      >
+                        Lưu cấu hình
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
             </div>
-            
+          </div>
         </section>
-    </main>
+      </main>
+    </div>
 
-</body>
+    <script src="profile.js"></script>
+  </body>
 </html>

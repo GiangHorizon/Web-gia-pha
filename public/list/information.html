@@ -3,182 +3,130 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chi tiết thành viên</title>
-
+    <title>Thông tin thành viên - Family Tree</title>
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <link rel="stylesheet"
-        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
+<body class="bg-gray-50 text-gray-800">
 
-<body class="bg-gray-100">
+    <div class="max-w-5xl mx-auto p-6">
+        
+        <!-- Nút Quay Lại -->
+        <a href="member.html" class="inline-flex items-center text-gray-600 hover:text-blue-600 mb-6 transition-colors">
+            <i class="fas fa-arrow-left mr-2"></i> Quay lại
+        </a>
 
-    <div class="max-w-6xl mx-auto p-6">
-
-        <!-- Back -->
-        <div class="mb-4">
-            <a href="member.html" class="text-gray-600 hover:text-black text-sm">
-                <i class="fas fa-arrow-left mr-2"></i>Quay lại
-            </a>
-        </div>
-
-        <!-- Main Card -->
-        <div class="bg-white border rounded shadow-sm p-4">
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-                <!-- Thông tin thành viên -->
-                <div class="lg:col-span-2">
-
-                    <div class="border rounded p-4">
-
-                        <div class="flex gap-4">
-
-                            <!-- Avatar -->
-                            <div>
-                                <img src="https://via.placeholder.com/120"
-                                    class="w-28 h-28 rounded-full object-cover border">
+        <!-- Khung Giao Diện Chính -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            
+            <!-- Cột trái: Thông tin cá nhân & gia đình -->
+            <div class="md:col-span-2 space-y-6">
+                
+                <!-- Box 1: Thông tin cá nhân -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border" id="profileBox">
+                    <div class="flex items-start gap-6">
+                        <!-- Avatar -->
+                        <div id="avatarContainer">
+                            <div class="w-24 h-24 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-3xl font-bold border">
+                                ?
                             </div>
-
-                            <!-- Info -->
-                            <div class="flex-1">
-
-                                <div class="flex items-center gap-2 mb-3">
-                                    <h2 class="text-xl font-bold">
-                                        Nguyễn Văn C
-                                    </h2>
-
-                                    <span
-                                        class="px-2 py-1 text-xs bg-gray-200 rounded">
-                                        Con trai
-                                    </span>
-                                </div>
-
-                                <div class="space-y-2 text-gray-700 text-sm">
-
-                                    <p>
-                                        <i class="fas fa-mars mr-2"></i>
-                                        Nam
-                                    </p>
-
-                                    <p>
-                                        <i class="fas fa-calendar-alt mr-2"></i>
-                                        20/03/1988
-                                    </p>
-
-                                    <p>
-                                        <i class="fas fa-map-marker-alt mr-2"></i>
-                                        Nơi sinh: Hà Nội
-                                    </p>
-
-                                    <p>
-                                        <i class="fas fa-briefcase mr-2"></i>
-                                        Nghề nghiệp: Kỹ sư
-                                    </p>
-
-                                    <p>
-                                        <i class="fas fa-sticky-note mr-2"></i>
-                                        Ghi chú:
-                                    </p>
-
-                                </div>
-
-                                <button
-                                    class="mt-5 px-4 py-2 border rounded hover:bg-gray-100">
-                                    Sửa thông tin
-                                </button>
-
+                        </div>
+                        
+                        <!-- Chi tiết thông tin (Trạng thái VIEW) -->
+                        <div class="flex-1 space-y-3" id="viewMode">
+                            <div class="flex items-center gap-3">
+                                <h2 class="text-2xl font-bold text-gray-900" id="mName">---</h2>
+                                <span class="text-xs font-semibold px-2.5 py-1 rounded-full uppercase" id="mRoleBadge">Guest</span>
                             </div>
-
+                            
+                            <ul class="space-y-2 text-sm text-gray-600">
+                                <li><i class="fas fa-venus-mars w-5"></i> <strong>Giới tính:</strong> <span id="mGender">---</span></li>
+                                <li><i class="fas fa-calendar-alt w-5"></i> <strong>Ngày sinh:</strong> <span id="mDob">---</span></li>
+                                <li><i class="fas fa-envelope w-5"></i> <strong>Gmail:</strong> <span id="mGmail">---</span></li>
+                                <li><i class="fas fa-comment-alt w-5"></i> <strong>Ghi chú:</strong> <span id="mNote">---</span></li>
+                            </ul>
+                            
+                            <button onclick="toggleEditMode(true)" class="mt-4 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+                                Sửa thông tin
+                            </button>
                         </div>
 
+                        <!-- Form chỉnh sửa (Trạng thái EDIT - Mặc định ẩn) -->
+                        <form class="flex-1 space-y-3 hidden" id="editMode" onsubmit="saveInformation(event)">
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase">Họ và tên</label>
+                                <input type="text" id="inputName" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase">Giới tính</label>
+                                    <select id="selectGender" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                        <option value="Nam">Nam</option>
+                                        <option value="Nữ">Nữ</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-xs font-bold text-gray-500 uppercase">Ngày sinh</label>
+                                    <input type="date" id="inputDob" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase">Gmail</label>
+                                <input type="email" id="inputGmail" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs font-bold text-gray-500 uppercase">Ghi chú</label>
+                                <textarea id="inputNote" rows="2" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                            </div>
+                            <div class="flex gap-2 pt-2">
+                                <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors">Lưu</button>
+                                <button type="button" onclick="toggleEditMode(false)" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition-colors">Hủy</button>
+                            </div>
+                        </form>
                     </div>
-
-                    <!-- Quan hệ gia đình -->
-                    <div class="border rounded p-4 mt-4">
-
-                        <h3 class="font-semibold mb-3">
-                            Thông tin gia đình
-                        </h3>
-
-                        <div class="space-y-2 text-sm">
-
-                            <div class="flex">
-                                <span class="w-24 font-medium">Cha:</span>
-                                <span>Nguyễn Văn A</span>
-                            </div>
-
-                            <div class="flex">
-                                <span class="w-24 font-medium">Mẹ:</span>
-                                <span>Trần Thị B</span>
-                            </div>
-
-                            <div class="flex">
-                                <span class="w-24 font-medium">Vợ/Chồng:</span>
-                                <span>Lê Thị K</span>
-                            </div>
-
-                            <div>
-                                <span class="font-medium">Con cái:</span>
-
-                                <ul class="list-disc ml-8 mt-2">
-                                    <li>Nguyễn Văn G</li>
-                                    <li>Nguyễn Thị H</li>
-                                </ul>
-                            </div>
-
-                        </div>
-
-                    </div>
-
                 </div>
 
-                <!-- Khu vực ảnh -->
-                <div>
-
-                    <div class="border rounded p-4 h-full">
-
-                        <h3 class="font-semibold mb-3">
-                            Ảnh
-                        </h3>
-
-                        <div
-                            class="border bg-gray-100 h-64 flex items-center justify-center">
-
-                            <i
-                                class="fas fa-image text-6xl text-gray-400"></i>
-
+                <!-- Box 2: Thông tin gia đình -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4 pb-2 border-b">Thông tin gia đình</h3>
+                    <div class="space-y-3 text-sm">
+                        <p><strong>Cha:</strong> <span id="fName" class="text-gray-600">---</span></p>
+                        <p><strong>Mẹ:</strong> <span id="moName" class="text-gray-600">---</span></p>
+                        <p><strong>Vợ/Chồng:</strong> <span id="spName" class="text-gray-600">---</span></p>
+                        <div>
+                            <p class="font-bold mb-1">Con cái:</p>
+                            <ul id="childrenList" class="list-disc list-inside text-gray-600 pl-2 space-y-1">
+                                <li>Không có dữ liệu</li>
+                            </ul>
                         </div>
-
-                        <!-- Gallery -->
-                        <div class="grid grid-cols-3 gap-2 mt-4">
-
-                            <div
-                                class="border h-16 bg-gray-100 flex items-center justify-center">
-                                <i class="fas fa-image text-gray-400"></i>
-                            </div>
-
-                            <div
-                                class="border h-16 bg-gray-100 flex items-center justify-center">
-                                <i class="fas fa-image text-gray-400"></i>
-                            </div>
-
-                            <div
-                                class="border h-16 bg-gray-100 flex items-center justify-center">
-                                <i class="fas fa-image text-gray-400"></i>
-                            </div>
-
-                        </div>
-
                     </div>
-
                 </div>
 
             </div>
 
-        </div>
+            <!-- Cột phải: Album Ảnh -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border space-y-4">
+                <h3 class="text-lg font-bold text-gray-900">Ảnh</h3>
+                <div class="border rounded-xl bg-gray-50 aspect-square flex items-center justify-center">
+                    <i class="far fa-image text-5xl text-gray-300"></i>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="border rounded-lg bg-gray-50 aspect-square flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
+                        <i class="far fa-image text-lg text-gray-300"></i>
+                    </div>
+                    <div class="border rounded-lg bg-gray-50 aspect-square flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
+                        <i class="far fa-image text-lg text-gray-300"></i>
+                    </div>
+                    <div class="border rounded-lg bg-gray-50 aspect-square flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
+                        <i class="far fa-image text-lg text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
 
+        </div>
     </div>
 
+    <!-- Script xử lý Logic -->
+    <script src="information.js"></script>
 </body>
 </html>

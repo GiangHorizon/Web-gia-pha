@@ -83,19 +83,40 @@ function filterMembers(members, keyword) {
     member.name.toLowerCase().includes(keyword.toLowerCase())
   );
 }
+function formatDate(dateString) {
+  if (!dateString) return "";
+  // Tách lấy phần ngày trước chữ 'T' (YYYY-MM-DD)
+  const datePart = dateString.split("T")[0]; 
+  const [year, month, day] = datePart.split("-");
+  return `${day}/${month}/${year}`; // Trả về định dạng DD/MM/YYYY thân thiện
 
+  
+}
 // Hàm call API và vẽ cây gia phả đầy đủ tính năng
 async function fetchAndRenderTree(generation, keyword = '') {
   try {
     currentGeneration = generation;
     const response = await fetch(`${API}/api/family_tree?generation=${generation}`);
-    const members = await response.json();
+    const data = await response.json(); // Nhận object { nodeDataArray, linkDataArray } từ Backend
+    
+    // Lấy danh sách thành viên thực tế từ nodeDataArray (bỏ qua các node kết hôn "MARRIAGE")
+    // Đồng thời map lại thuộc tính ngày sinh/ngày mất cho đúng với phần hiển thị HTML bên dưới
+    const members = (data.nodeDataArray || [])
+      .filter(node => node.category === "MEMBER")
+      .map(node => ({
+        id: node.key,
+        name: node.name,
+        generation: node.generation,
+        date_birth: node.birth, // map từ 'birth' của backend sang 'date_birth' của frontend
+        date_death: node.death  // map từ 'death' của backend sang 'date_death' của frontend
+      }));
+
     allMembers = members;
     
     // Lọc danh sách theo từ khóa tìm kiếm
     const filteredMembers = filterMembers(members, keyword);
     
-    // Kiểm tra nếu không có thành viên nào khớp
+    // Kiểm tra nếu không có thành viên nào khớp (Lúc này filteredMembers đã là một Array chuẩn)
     if (!filteredMembers.length) {
       container.innerHTML = '<div class="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">Không tìm thấy thành viên phù hợp.</div>';
       return;
@@ -121,7 +142,7 @@ async function fetchAndRenderTree(generation, keyword = '') {
       htmlContent += `<div class="flex justify-center gap-10 ${marginTopClass}">`;
 
       listMembers.forEach(member => {
-        // Xử lý hiển thị vòng đời (Ưu tiên tiếng Việt từ Code 1)
+        // Xử lý hiển thị vòng đời 
         const lifespan = (member.date_birth && member.date_death) 
           ? `${member.date_birth} - ${member.date_death}` 
           : (member.date_birth ? `${member.date_birth}` : "Chưa cập nhật");
@@ -154,6 +175,9 @@ async function fetchAndRenderTree(generation, keyword = '') {
         Can't load family tree. Please try again later.
       </div>`;
   }
+  const lifespan = (member.date_birth && member.date_death) 
+  ? `${formatDate(member.date_birth)} - ${formatDate(member.date_death)}` 
+  : (member.date_birth ? `${formatDate(member.date_birth)}` : "Chưa cập nhật");
 }
 
 // ==========================================

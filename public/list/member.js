@@ -21,7 +21,7 @@ function renderMembers(members) {
   if (members.length === 0) {
     memberTableBody.innerHTML = `
       <tr>
-        <td colspan="6" class="p-8 text-center text-slate-500 py-12">
+        <td colspan="8" class="p-8 text-center text-slate-500 py-12">
           No matching members found.
         </td>
       </tr>`;
@@ -29,38 +29,89 @@ function renderMembers(members) {
   }
 
   memberTableBody.innerHTML = members
-    .map(
-      (member) => `
-    <tr class="border-b hover:bg-gray-50 member-row" data-id="${member.id}">
-      <td class="p-3">
-        <img src="${member.avatar_url || "https://via.placeholder.com/40"}" 
-             alt="${member.name}" 
-             class="w-10 h-10 rounded-full object-cover border border-gray-200">
-      </td>
-      <td class="p-3 font-medium text-gray-800">${member.name}</td>
-      <td class="p-3">${member.gender || "Unknown"}</td>
-      <td class="p-3">${member.date_birth || "---"}</td>
-      <td class="p-3">${member.relationship || "Member"}</td>
-      <td class="p-3 text-center">
-        <a href="information.html?id=${member.id}" 
-           title="View details"
-           class="inline-block p-2 text-gray-600 hover:text-blue-600 transition-colors">
-          <i class="fas fa-eye"></i>
-        </a>
-        <button onclick="editMember(${member.id})" 
-                title="Edit"
-                class="inline-block p-2 ml-1 text-gray-600 hover:text-green-600 transition-colors">
-          <i class="fas fa-edit"></i>
-        </button>
-        <button onclick="deleteMember(${member.id})" 
-                title="Delete"
-                class="inline-block p-2 ml-1 text-gray-600 hover:text-red-600 transition-colors">
-          <i class="fas fa-trash"></i>
-        </button>
-      </td>
-    </tr>
-  `,
-    )
+    .map((member) => {
+      // Ngay sinh
+      const dob = member.date_birth
+        ? new Date(member.date_birth).toLocaleDateString("vi-VN")
+        : "---";
+
+      // Ngay mat
+      const dod = member.date_death
+        ? new Date(member.date_death).toLocaleDateString("vi-VN")
+        : "---";
+      //Anh
+      const avatarHtml = member.avatar_url
+        ? `<img src="${member.avatar_url}" alt="${member.name}" class="w-10 h-10 rounded-full object-cover border border-gray-200">`
+        : `<div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs uppercase border border-blue-200">
+            ${member.name ? member.name.split(" ").pop().charAt(0) : "?"}
+           </div>`;
+
+      // Sap xep thu tu
+      return `
+        <tr class="border-b hover:bg-gray-50 member-row" data-id="${member.id}">
+          <!-- 1. Photo -->
+          <td class="p-3 w-16 align-middle">
+            ${avatarHtml}
+          </td>
+          
+          <!-- 2. Full Name -->
+          <td class="p-3 font-medium text-gray-800 align-middle">
+          <div class="font-semibold">${member.name}</div>
+          ${
+          member.role === "Admin"
+          ? `<span class="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full uppercase">Admin</span>`
+          : member.role === "Member"
+          ? `<span class="text-[10px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full uppercase">Member</span>`
+          : `<span class="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full uppercase">Guest</span>`
+  }
+</td>
+          
+          <!-- 3. Gender -->
+          <td class="p-3 align-middle text-gray-600">
+            ${member.gender || "Unknown"}
+          </td>
+          
+          <!-- 4. Date of Birth -->
+          <td class="p-3 align-middle text-gray-600">
+            ${dob}
+          </td>
+          
+          <!-- 5. Date of Death -->
+          <td class="p-3 align-middle text-gray-600">
+            ${dod}
+          </td>
+          
+          <!-- 6. Father -->
+          <td class="p-3 align-middle text-gray-600">
+            ${member.father_name || "---"}
+          </td>
+          
+          <!-- 7. Mother -->
+          <td class="p-3 align-middle text-gray-600">
+            ${member.mother_name || "---"}
+          </td>
+          
+          <!-- 8. Actions -->
+          <td class="p-3 align-middle text-center whitespace-nowrap">
+            <a href="information.html?id=${member.id}" 
+               title="View details"
+               class="inline-block p-2 text-gray-500 hover:text-blue-600 transition-colors">
+              <i class="fas fa-eye text-base"></i>
+            </a>
+            <button onclick="editMember(${member.id})" 
+                    title="Edit"
+                    class="inline-block p-2 ml-1 text-gray-500 hover:text-green-600 transition-colors">
+              <i class="fas fa-edit text-base"></i>
+            </button>
+            <button onclick="deleteMember(${member.id})" 
+                    title="Delete"
+                    class="inline-block p-2 ml-1 text-gray-500 hover:text-red-600 transition-colors">
+              <i class="fas fa-trash text-base"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    })
     .join("");
 }
 
@@ -144,12 +195,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 // Show and hide
-document.addEventListener('DOMContentLoaded', () => {
-    const menuToggle = document.getElementById('menu-toggle');
-    const sidebarNav = document.getElementById('sidebar-nav');
+document.addEventListener("DOMContentLoaded", () => {
+  const menuToggle = document.getElementById("menu-toggle");
+  const sidebarNav = document.getElementById("sidebar-nav");
 
-    menuToggle.addEventListener('click', () => {
-      // Toggle class 'hidden' của Tailwind để ẩn/hiện phần nav
-      sidebarNav.classList.toggle('hidden');
-    });
+  menuToggle.addEventListener("click", () => {
+    // Toggle class 'hidden' của Tailwind để ẩn/hiện phần nav
+    sidebarNav.classList.toggle("hidden");
   });
+});
