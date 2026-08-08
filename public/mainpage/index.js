@@ -54,8 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuToggle = document.getElementById('menu-toggle');
     const sidebarNav = document.getElementById('sidebar-nav');
 
-    menuToggle.addEventListener('click', () => {
-      // Toggle class 'hidden' của Tailwind để ẩn/hiện phần nav
-      sidebarNav.classList.toggle('hidden');
-    });
+    
   });
+
+
+  

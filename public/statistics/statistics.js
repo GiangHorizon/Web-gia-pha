@@ -24,7 +24,9 @@ async function fetchAndRenderStatistics() {
     // API endpoint written in server.js
     const response = await fetch(`${API}/api/statistics`);
     const data = await response.json();
-
+    if (!response.ok) {
+      throw new Error(`Server error: ${response.status}`);
+    }
     // 1. Update KPI Card numbers
     document.getElementById("stat-total").innerText = data.total;
     document.getElementById("stat-male").innerText = data.male;
@@ -39,7 +41,6 @@ async function fetchAndRenderStatistics() {
     document.getElementById("pct-female").innerText = `${pctFemale}%`;
 
     // 2. RENDER BAR CHART (Members by Generation)
-    // Translate "Thế hệ X" from Vietnamese backend response to English "Generation X"
     const genLabels = data.generationData.map(item => item.label.replace("Thế hệ", "Generation"));
     const genValues = data.generationData.map(item => item.count);
 

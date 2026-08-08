@@ -4,9 +4,10 @@ const cors = require("cors"); // Cross-Origin Resource Sharing: cho phép fronte
 const pool = require("./db");
 const bcrypt = require("bcrypt"); // Sử dụng để mã hóa password trước khi lưu vào database
 const path = require("path");
-
+const jwt = require("jsonwebtoken"); // Sử dụng để tạo token xác thực người dùng
 const app = express();
 const PORT = 3000;
+const authenticateToken = require("./public/middleware/auth.js"); // Middleware xác thực token
 
 // ==========================================
 // MIDDLEWARES
@@ -84,14 +85,27 @@ app.post("/login", async (req, res) => {
         .json({ message: "Username or password is incorrect" });
     }
 
-    res.json({
+    const payload = {
+      id: account.id,
+      username: account.username,
+      member_id: account.member_id,
+      role: account.role || "Member"
+    };
+
+    const accessToken = jwt.sign(
+      payload,
+      process.env.ACCESS_TOKEN_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    return res.json({
       message: "Login successful!",
+      accessToken: accessToken, // Client sẽ dùng token này cho các request sau
       user: {
         id: account.id,
-        name: account.name,
-        email: account.email,
         username: account.username,
-      },
+        name: account.name
+      }
     });
   } catch (err) {
     console.error("Error login: ", err);
@@ -110,36 +124,35 @@ app.get("/api/members", async (req, res) => {
       SELECT 
         m.id, 
         m.name, 
-        CASE 
-          WHEN m.male = 1 THEN 'Male'
-          WHEN m.female = 1 THEN 'Female'
-          ELSE 'Unknown'
-        END AS gender, 
+        m.gender, 
         m.date_birth, 
         m.date_death,
+        m.birth_order,
+        m.avatar_url,
+        m.gmail,
+        m.phone,
+        m.address,
+        m.biography,
         
-        -- XÁC ĐỊNH VAI TRÒ (ROLE) TRÊN TRANG WEB
-        -- Nếu ID tài khoản là 1 (hoặc admin mặc định) thì hiển thị Admin, có tài khoản thì hiển thị Member, còn lại là Guest (Khách/Chưa tạo tài khoản)
+        -- Xác định vai trò dựa trên tài khoản liên kết qua gmail/email
         CASE 
-          WHEN a.id = 1 THEN 'Admin'                       -- Tài khoản đầu tiên làm Admin
-          WHEN a.id IS NOT NULL THEN 'Member'             -- Có tài khoản đăng nhập
-          ELSE 'Guest'                                    -- Thành viên gia phả thuần túy, chưa có tài khoản
+          WHEN a.id = 1 THEN 'Admin'
+          WHEN a.id IS NOT NULL THEN 'Member'
+          ELSE 'Guest'
         END AS role,
         
-        m.avatar_url,
         (SELECT name FROM members WHERE id = m.father_id) AS father_name,
         (SELECT name FROM members WHERE id = m.mother_id) AS mother_name
       FROM members m
-      -- LEFT JOIN với bảng accounts dựa trên tên (hoặc email nếu sau này bạn thêm cột email vào bảng members)
-      LEFT JOIN accounts a ON m.name = a.name
-      ORDER BY m.name ASC
+      LEFT JOIN accounts a ON m.gmail = a.email
+      ORDER BY m.id ASC
     `);
 
     res.json(result.rows);
   } catch (err) {
     console.error("Database Query Error:", err.message);
     res.status(500).json({
-      error: "Không thể lấy danh sách thành viên",
+      error: "Can't fetch members from database",
       details: err.message,
     });
   }
@@ -193,52 +206,54 @@ app.post("/api/addmember", async (req, res) => {
 });
 
 // Lấy cấu trúc cây gia phả đệ quy (phục vụ cho việc vẽ sơ đồ hiển thị)
-app.get('/api/family_tree', async (req, res) => {
+
+// Sử dụng authenticateToken cho /api/family_tree
+app.get('/api/family_tree', authenticateToken, async (req, res) => {
   try {
-    const selectedGen = req.query.generation; 
-    
-    let queryText = `
+    const selectedGen = req.query.generation;
+    const queryParams = [];
+
+    let whereClause = "";
+    if (selectedGen && selectedGen !== 'all' && !isNaN(parseInt(selectedGen))) {
+      whereClause = ` WHERE generation <= $1`;
+      queryParams.push(parseInt(selectedGen));
+    }
+
+    // Tối ưu CTE đệ quy tránh trùng lặp dữ liệu
+    const queryText = `
       WITH RECURSIVE family_tree AS (
-          SELECT id, name, father_id, mother_id, date_birth, date_death, male, female, 1 AS generation 
+          SELECT id, name, father_id, mother_id, date_birth, date_death, gender, 1 AS generation 
           FROM members 
           WHERE father_id IS NULL AND mother_id IS NULL
           
-          UNION ALL
+          UNION
 
-          SELECT mb.id, mb.name, mb.father_id, mb.mother_id, mb.date_birth, mb.date_death, mb.male, mb.female, ft.generation + 1
+          SELECT mb.id, mb.name, mb.father_id, mb.mother_id, mb.date_birth, mb.date_death, mb.gender, ft.generation + 1
           FROM members mb
-          INNER JOIN family_tree ft ON mb.father_id = ft.id OR mb.mother_id = ft.id
+          INNER JOIN family_tree ft ON (mb.father_id = ft.id OR (mb.father_id IS NULL AND mb.mother_id = ft.id))
       )
-      SELECT DISTINCT id, name, father_id, mother_id, date_birth, date_death, male, female, generation 
+      SELECT DISTINCT id, name, father_id, mother_id, date_birth, date_death, gender, generation 
       FROM family_tree
+      ${whereClause}
+      ORDER BY generation ASC, date_birth ASC
     `;
-
-    const queryParams = [];
-    if (selectedGen && selectedGen !== 'all') {
-      queryText += ` WHERE generation <= $1`;
-      queryParams.push(parseInt(selectedGen));
-    }
-    queryText += ` ORDER BY generation ASC, date_birth ASC`;
 
     const result = await pool.query(queryText, queryParams);
     const members = result.rows;
 
     const nodeDataArray = [];
     const linkDataArray = [];
-    const marriageSet = new Set(); 
+    const marriageSet = new Set();
 
     members.forEach(m => {
-      // Xác định giới tính dạng text để GoJS tương tác dễ hơn nếu cần
-      const genderText = m.male === 1 ? "male" : (m.female === 1 ? "female" : "unknown");
-
       nodeDataArray.push({
-        key: String(m.id), 
+        key: String(m.id),
         name: m.name,
-        birth: m.date_birth, // Trong ảnh DB của bạn giờ đã là DATE chuẩn (ví dụ "1930-01-01")
+        birth: m.date_birth,
         death: m.date_death,
-        gender: genderText,
+        gender: m.gender,
         generation: m.generation,
-        category: "MEMBER" 
+        category: "MEMBER"
       });
 
       if (m.father_id && m.mother_id) {
@@ -247,29 +262,12 @@ app.get('/api/family_tree', async (req, res) => {
         if (!marriageSet.has(marriageKey)) {
           marriageSet.add(marriageKey);
 
-          nodeDataArray.push({ 
-            key: marriageKey, 
-            category: "MARRIAGE" 
-          });
-
-          // Nối trực tiếp từ Bố sang Mẹ (SPOUSE) để ép ngang hàng
-          linkDataArray.push({
-            from: String(m.father_id),
-            to: String(m.mother_id),
-            category: "SPOUSE"
-          });
-
-          // Treo nút kết hôn ảo xuống dưới người Bố
-          linkDataArray.push({
-            from: String(m.father_id),
-            to: marriageKey,
-            category: "CHILD"
-          });
+          nodeDataArray.push({ key: marriageKey, category: "MARRIAGE" });
+          linkDataArray.push({ from: String(m.father_id), to: String(m.mother_id), category: "SPOUSE" });
+          linkDataArray.push({ from: String(m.father_id), to: marriageKey, category: "CHILD" });
         }
 
-        // Tẽ nhánh từ nút kết hôn ảo xuống các con
         linkDataArray.push({ from: marriageKey, to: String(m.id), category: "CHILD" });
-
       } else if (m.father_id || m.mother_id) {
         const parentId = m.father_id || m.mother_id;
         linkDataArray.push({ from: String(parentId), to: String(m.id), category: "CHILD" });
@@ -279,7 +277,7 @@ app.get('/api/family_tree', async (req, res) => {
     res.json({ nodeDataArray, linkDataArray });
 
   } catch (err) {
-    console.error(err);
+    console.error("Family Tree API Error:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -325,30 +323,34 @@ app.get("/api/addmember/search", async (req, res) => {
 // ==========================================
 app.get('/api/statistics', async (req, res) => {
   try {
-    // 1. Tính tổng bằng SUM trực tiếp trên cột male và female cực kỳ tối ưu
+    // 1. Đếm tổng số lượng và đếm theo cột `gender`
     const summaryQuery = await pool.query(`
       SELECT 
         COUNT(*) as total,
-        SUM(male) as male,
-        SUM(female) as female
+        COUNT(CASE WHEN gender = 'Male' THEN 1 END) as male,
+        COUNT(CASE WHEN gender = 'Female' THEN 1 END) as female
       FROM members
     `);
     const summary = summaryQuery.rows[0];
 
-    // 2. Lấy phân bổ thế hệ
+    
     const generationQuery = await pool.query(`
       WITH RECURSIVE family_tree AS (
-          SELECT id, father_id, mother_id, 1 AS generation 
+          -- Anchor: Những người thuộc thế hệ đầu tiên (không có thông tin bố mẹ trong hệ thống)
+          SELECT id, 1 AS generation 
           FROM members 
           WHERE father_id IS NULL AND mother_id IS NULL
           
           UNION ALL
 
-          SELECT mb.id, mb.father_id, mb.mother_id, ft.generation + 1
+          -- Recursive: Tìm con của thế hệ trước (dùng COALESCE/DISTINCT để không bị nhân đôi record)
+          SELECT mb.id, ft.generation + 1
           FROM members mb
-          INNER JOIN family_tree ft ON mb.father_id = ft.id OR mb.mother_id = ft.id
+          INNER JOIN (
+            SELECT DISTINCT id, generation FROM family_tree
+          ) ft ON mb.father_id = ft.id OR (mb.father_id IS NULL AND mb.mother_id = ft.id)
       )
-      SELECT generation, COUNT(*) as count 
+      SELECT generation, COUNT(DISTINCT id) as count 
       FROM family_tree 
       GROUP BY generation 
       ORDER BY generation ASC
@@ -361,7 +363,7 @@ app.get('/api/statistics', async (req, res) => {
       total: parseInt(summary.total || 0),
       male: parseInt(summary.male || 0),
       female: parseInt(summary.female || 0),
-      maxGeneration: maxGeneration,
+      maxGeneration: parseInt(maxGeneration),
       generationData: generations.map(g => ({
         label: `Generation ${g.generation}`,
         count: parseInt(g.count)
@@ -529,7 +531,7 @@ app.get("/api/admin/backup", async (req, res) => {
   try {
     const membersData = await pool.query("SELECT * FROM members ORDER BY id ASC");
     const accountsData = await pool.query("SELECT id, name, email, username, member_id FROM accounts");
-    
+
     res.json({
       backup_version: "1.0",
       timestamp: new Date(),
@@ -542,7 +544,7 @@ app.get("/api/admin/backup", async (req, res) => {
 });
 
 // Giả định ID người dùng đang đăng nhập (Khi làm thực tế, lấy từ req.user.id sau khi xác thực)
-const getCurrentUserId = (req) => 3; 
+const getCurrentUserId = (req) => 3;
 
 // [GET] Lấy thông tin hồ sơ từ PostgreSQL bao gồm cả việc truy vấn tên Cha/Mẹ từ mối quan hệ trực hệ
 app.get('/api/user/profile', async (req, res) => {
@@ -560,7 +562,7 @@ app.get('/api/user/profile', async (req, res) => {
       LEFT JOIN members m ON u.mother_id = m.id
       WHERE u.id = $1
     `;
-    
+
     const result = await pool.query(queryText, [userId]);
 
     if (result.rows.length === 0) {
@@ -602,7 +604,7 @@ app.put('/api/user/profile', async (req, res) => {
       SET name = $1, date_birth = $2, male = $3, female = $4, gmail = $5
       WHERE id = $6
     `;
-    
+
     await pool.query(updateText, [name, date_birth, male, female, gmail, userId]);
     res.json({ success: true, message: "Đã cập nhật cơ sở dữ liệu thành công!" });
 
@@ -612,9 +614,7 @@ app.put('/api/user/profile', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server kết nối PostgreSQL đang chạy tại: http://localhost:${PORT}`);
-});
+// GET /api/me - Lấy thông tin người dùng đang đăng nhập
 
 // Cấu hình các thư mục tĩnh chứa file giao diện (HTML, CSS, JS công khai)
 app.use(express.static(path.join(__dirname, "public")));
