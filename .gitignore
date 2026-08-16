@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Biến môi trường - KHÔNG BAO GIỜ commit file này (chứa secret thật)
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.vscode/
+*.swp
+.DS_Store
+
+# Logs
+npm-debug.log*
+*.log
