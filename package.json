@@ -1,9 +1,18 @@
 {
+  "name": "web-gia-pha",
+  "version": "1.0.0",
+  "description": "Ứng dụng quản lý cây gia phả (family tree) với phân quyền Admin/Member.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "pg": "^8.21.0"
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.22.0"
   }
 }

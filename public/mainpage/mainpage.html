@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gia Phả Họ Nguyễn</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="mainpage.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body class="bg-slate-100">
+<div class="flex h-screen overflow-hidden">
+
+  <aside class="w-64 bg-white border-r">
+    <div class="h-20 flex items-center px-6 border-b">
+      <i class="fas fa-bars text-2xl cursor-pointer"></i>
+    </div>
+
+    <nav class="p-4 space-y-2">
+      <a href="/mainpage/mainpage.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 text-blue-600 font-medium">
+        <i class="fas fa-house"></i> Home
+      </a>
+      <a id="menu-members" href="/list/member.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
+        <i class="fas fa-users"></i> Members
+      </a>
+      <a id="menu-relationship" href="#" onclick="alert('Tính năng Quan hệ họ hàng đang được phát triển.'); return false;" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
+        <i class="fas fa-link"></i> Relationships
+      </a>
+      <a id="menu-statistics" href="/statistics/statistics.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
+        <i class="fas fa-chart-column"></i> Statistics
+      </a>
+      <a id="menu-documents" href="/documents/documents.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
+        <i class="fas fa-file"></i> Documents
+      </a>
+      <a id="menu-settings"
+   href="/settings/settings.html"
+   class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
+        <i class="fas fa-gear"></i> Settings
+      </a>
+    </nav>
+  </aside>
+
+  <main class="flex-1 flex flex-col">
+    <header class="h-20 bg-white border-b flex items-center justify-between px-8">
+      <h1 class="text-3xl font-bold">GIA PHẢ HỌ NGUYỄN</h1>
+      <!--Search-->
+      <div class="flex items-center gap-5">
+        <div class="relative">
+          <i class="fas fa-search absolute left-4 top-4 text-gray-400"></i>
+          <input id="member-search" class="w-80 pl-11 py-3 rounded-full bg-slate-100" placeholder="Find members...">
+        </div>
+      <!-- NOTIFICATION -->
+        <i class="far fa-bell text-xl cursor-pointer hover:text-gray-600"></i>
+      <!-- ADMIN DROPDOWN -->
+        <div class="relative id-admin-container">
+          <button onclick="toggleAdminDropdown(event)" class="flex items-center gap-2 hover:bg-gray-50 p-1.5 rounded-xl transition-colors duration-200">
+            <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600">
+              <i class="fas fa-user-shield"></i>
+            </div>
+            <span id="user-name" class="font-medium text-gray-700"></span>
+            <i class="fas fa-chevron-down text-xs text-gray-400 ml-1"></i>
+          </button>
+
+          <div id="adminDropdownMenu" class="hidden absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 py-2 animate-fade-in">
+            <div class="px-4 py-2 border-b border-gray-100">
+    <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">
+        Account
+    </p>
+
+    <p id="dropdown-name"
+       class="text-sm font-semibold text-gray-800 truncate">
+    </p>
+
+    <p id="dropdown-role"
+       class="text-xs text-gray-500">
+    </p>
+</div>
+            
+            <div class="p-1 border-b border-gray-100">
+              <a id="menu-profile"
+href="/profile/profile.html" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors">
+                <i class="fas fa-id-card w-4 text-center text-gray-400"></i> Profile
+              </a>
+              <a id="menu-dashboard"
+href="#" onclick="alert('Trang Dashboard đang được phát triển.'); return false;" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors">
+                <i class="fas fa-sliders w-4 text-center text-gray-400"></i> Dashboard
+              </a>            </div>
+
+            <div class="p-1">
+              <a href="#"
+   id="logout-btn"
+   onclick="logout()"
+   class="flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+
+    <i class="fas fa-right-from-bracket w-4 text-center"></i>
+    Logout
+
+</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+<!-- ================= HOME CONTENT ================= -->
+    <section class="p-6 flex-1 overflow-auto">
+      <div class="bg-white rounded-2xl border p-6 min-h-full">
+
+        <div class="flex justify-between mb-8">
+          <div class="flex gap-3">
+            <button id="compact-btn" class="w-12 h-12 border rounded-xl hover:bg-gray-50" title="Compact Mode"><i class="fas fa-sliders"></i></button>
+            <button id="zoom-in-btn" class="w-12 h-12 border rounded-xl hover:bg-gray-50" title="Zoom In"><i class="fas fa-search-plus"></i></button>
+            <button id="zoom-out-btn" class="w-12 h-12 border rounded-xl hover:bg-gray-50" title="Zoom Out"><i class="fas fa-search-minus"></i></button>
+            <button id="reset-view-btn" class="w-12 h-12 border rounded-xl hover:bg-gray-50" title="Reset View"><i class="fas fa-expand"></i></button>
+          </div>
+
+          <div class="flex gap-4">
+            <select class="border rounded-xl px-4" id="generation-select">
+              <option value="all">Display: Full</option>
+              <option value="1">Display: 1 generation</option>
+              <option value="2">Display: 2 generation</option>
+              <option value="3">Display: 3 generation</option>
+              <option value="4">Display: 4 generation</option>
+              <option value="5">Display: 5 generation</option>
+            </select>
+            <select class="border rounded-xl px-4">
+              <option>Arrangement: Default</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="tree-viewport" class="rounded-2xl border border-slate-200 bg-slate-50 p-4 overflow-auto min-h-[720px]">
+          <div id="tree-container" class="transition-transform duration-200 origin-top-left" style="transform: scale(1); transform-origin: top left;">
+            <p class="text-gray-400 text-center py-10">Loading family tree...</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="/http.js"></script>
+<script src="/escape-html.js"></script>
+<script src="/api.js"></script>
+<script src="mainpage.js"></script>
+<script src="/role-guard.js"></script>
+</body>
+</html>
