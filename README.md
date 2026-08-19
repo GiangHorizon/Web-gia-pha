@@ -41,10 +41,30 @@ cp .env.example .env
 **Không commit file `.env` thật lên Git** — file này chứa mật khẩu database và
 `JWT_SECRET`. `.gitignore` đã được cấu hình để chặn việc này.
 
+#### Dùng database cloud (Neon, Supabase, Render, Railway...)
+
+Thay vì cài PostgreSQL local, bạn có thể trỏ thẳng tới database cloud: lấy
+connection string nhà cung cấp đưa cho bạn (dạng
+`postgresql://user:password@host:5432/dbname`) rồi điền vào `.env`:
+
+```
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+DB_SSL=true
+```
+
+Hầu hết database cloud bắt buộc kết nối qua SSL — nhớ đặt `DB_SSL=true`,
+nếu không sẽ bị lỗi kết nối.
+
 ### Khởi tạo database
 
 ```bash
 psql -U <user> -d <database> -f database/schema.sql
+```
+
+Nếu dùng database cloud, chạy bằng connection string thay vì `-U`/`-d`:
+
+```bash
+psql "postgresql://user:password@host:5432/dbname" -f database/schema.sql
 ```
 
 Script này tạo bảng `roles`, `members`, `accounts`, `marriages`, seed sẵn 2
