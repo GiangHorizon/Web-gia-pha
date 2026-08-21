@@ -15,9 +15,12 @@
 
   <body class="bg-gray-100">
     <div class="max-w-4xl mx-auto bg-white min-h-screen border p-6">
-      <div class="border-b pb-3 mb-5">
+      <div class="border-b pb-3 mb-5 flex items-center justify-between">
         <a href="member.html" class="text-sm text-gray-600 hover:text-black">
           <i class="fas fa-arrow-left mr-2"></i>Back
+        </a>
+        <a href="#" onclick="logout(); return false;" class="text-sm text-red-600 hover:text-red-700 font-medium">
+          <i class="fas fa-right-from-bracket mr-2"></i>Đăng xuất
         </a>
       </div>
 
@@ -127,6 +130,10 @@
       </form>
     </div>
 
+    <script src="/http.js"></script>
+<script src="/escape-html.js"></script>
+<script src="/api.js"></script>
     <script src="addmember.js"></script>
+    <script src="/role-guard.js"></script>
   </body>
 </html>

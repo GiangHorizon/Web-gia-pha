@@ -11,10 +11,15 @@
 
     <div class="max-w-5xl mx-auto p-6">
         
-        <!-- Nút Quay Lại -->
-        <a href="member.html" class="inline-flex items-center text-gray-600 hover:text-blue-600 mb-6 transition-colors">
-            <i class="fas fa-arrow-left mr-2"></i> Quay lại
-        </a>
+        <!-- Nút Quay Lại & Đăng xuất -->
+        <div class="flex items-center justify-between mb-6">
+            <a href="member.html" class="inline-flex items-center text-gray-600 hover:text-blue-600 transition-colors">
+                <i class="fas fa-arrow-left mr-2"></i> Quay lại
+            </a>
+            <a href="#" onclick="logout(); return false;" class="inline-flex items-center text-red-600 hover:text-red-700 text-sm font-medium transition-colors">
+                <i class="fas fa-right-from-bracket mr-2"></i> Đăng xuất
+            </a>
+        </div>
 
         <!-- Khung Giao Diện Chính -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -46,7 +51,7 @@
                                 <li><i class="fas fa-comment-alt w-5"></i> <strong>Ghi chú:</strong> <span id="mNote">---</span></li>
                             </ul>
                             
-                            <button onclick="toggleEditMode(true)" class="mt-4 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
+                            <button id="editToggleBtn" onclick="toggleEditMode(true)" class="mt-4 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors">
                                 Sửa thông tin
                             </button>
                         </div>
@@ -127,6 +132,10 @@
     </div>
 
     <!-- Script xử lý Logic -->
+    <script src="/http.js"></script>
+<script src="/escape-html.js"></script>
+<script src="/api.js"></script>
     <script src="information.js"></script>
+    <script src="/role-guard.js"></script>
 </body>
 </html>
