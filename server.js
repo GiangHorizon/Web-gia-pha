@@ -1943,11 +1943,8 @@ app.get(
 );
 
 // ==========================================
-// 4. STATIC FILES + VIEW ROUTES + START SERVER
+// 4. VIEW ROUTES + START SERVER
 // ==========================================
-
-// Thư mục public
-app.use(express.static(path.join(__dirname, "public")));
 
 // Trang chủ
 app.get("/", (req, res) => {
