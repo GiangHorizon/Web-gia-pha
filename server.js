@@ -1,637 +1,2005 @@
 require("dotenv").config();
+
 const express = require("express");
-const cors = require("cors"); // Cross-Origin Resource Sharing: cho phép frontend gọi backend dù khác port
-const pool = require("./db");
-const bcrypt = require("bcrypt"); // Sử dụng để mã hóa password trước khi lưu vào database
+const cors = require("cors");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const path = require("path");
 
+const pool = require("./db");
+
+const verifyToken = require("./middlewares/auth");
+const { isAdmin, isMember } = require("./middlewares/role");
+
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // ==========================================
-// MIDDLEWARES
+// MIDDLEWARE
 // ==========================================
-app.use(cors()); // Sử dụng Middleware cors để cho phép frontend gọi backend
+
+// Danh sách domain được phép gọi API (đặt trong .env, phân cách bởi dấu phẩy)
+// Ví dụ: ALLOWED_ORIGINS=http://localhost:3000,https://giapha.example.com
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || `http://localhost:${PORT}`)
+    .split(",")
+    .map(o => o.trim())
+    .filter(Boolean);
+
+app.use(cors({
+    origin: (origin, callback) => {
+        // Cho phép request không có origin (Postman, curl, server-to-server)
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error("Không được phép bởi CORS."));
+    },
+    credentials: true // Cho phép trình duyệt gửi/nhận cookie httpOnly kèm request
+}));
 app.use(express.json());
 
-// ==========================================
-// AUTHENTICATION APIs (ĐĂNG KÝ / ĐĂNG NHẬP)
-// ==========================================
-app.post("/register", async (req, res) => {
-  try {
-    const { name, email, username, password } = req.body;
-
-    if (!name || !email || !username || !password) {
-      return res.status(400).json({ error: "Please fill in all fields" });
-    }
-
-    const checkUser = await pool.query(
-      "SELECT * FROM accounts WHERE username = $1 OR email = $2",
-      [username, email],
-    );
-
-    if (checkUser.rows.length > 0) {
-      const existingAccount = checkUser.rows[0];
-      if (existingAccount.username === username) {
-        return res.status(400).json({ error: "This username already exists" });
-      }
-      if (existingAccount.email === email) {
-        return res
-          .status(400)
-          .json({ error: "This email is already registered" });
-      }
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const result = await pool.query(
-      "INSERT INTO accounts(name, email, username, password) VALUES($1, $2, $3, $4) RETURNING id, name, email, username",
-      [name, email, username, hashedPassword],
-    );
-
-    res.status(201).json({
-      message: "Register successful!",
-      user: result.rows[0],
-    });
-  } catch (err) {
-    console.error("Error register: ", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post("/login", async (req, res) => {
-  try {
-    const { username, password } = req.body;
-
-    const result = await pool.query(
-      "SELECT * FROM accounts WHERE username = $1 OR email = $2",
-      [username, username],
-    );
-
-    if (result.rows.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "Username or password is incorrect" });
-    }
-
-    const account = result.rows[0];
-
-    const kt = await bcrypt.compare(password, account.password);
-
-    if (!kt) {
-      return res
-        .status(400)
-        .json({ message: "Username or password is incorrect" });
-    }
-
-    res.json({
-      message: "Login successful!",
-      user: {
-        id: account.id,
-        name: account.name,
-        email: account.email,
-        username: account.username,
-      },
-    });
-  } catch (err) {
-    console.error("Error login: ", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ==========================================
-// MEMBER MANAGEMENT APIs (QUẢN LÝ THÀNH VIÊN)
-// ==========================================
-
-// Lấy danh sách thành viên đầy đủ cho phần hiển thị list 
-app.get("/api/members", async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT 
-        m.id, 
-        m.name, 
-        CASE 
-          WHEN m.male = 1 THEN 'Male'
-          WHEN m.female = 1 THEN 'Female'
-          ELSE 'Unknown'
-        END AS gender, 
-        m.date_birth, 
-        m.date_death,
-        
-        -- XÁC ĐỊNH VAI TRÒ (ROLE) TRÊN TRANG WEB
-        -- Nếu ID tài khoản là 1 (hoặc admin mặc định) thì hiển thị Admin, có tài khoản thì hiển thị Member, còn lại là Guest (Khách/Chưa tạo tài khoản)
-        CASE 
-          WHEN a.id = 1 THEN 'Admin'                       -- Tài khoản đầu tiên làm Admin
-          WHEN a.id IS NOT NULL THEN 'Member'             -- Có tài khoản đăng nhập
-          ELSE 'Guest'                                    -- Thành viên gia phả thuần túy, chưa có tài khoản
-        END AS role,
-        
-        m.avatar_url,
-        (SELECT name FROM members WHERE id = m.father_id) AS father_name,
-        (SELECT name FROM members WHERE id = m.mother_id) AS mother_name
-      FROM members m
-      -- LEFT JOIN với bảng accounts dựa trên tên (hoặc email nếu sau này bạn thêm cột email vào bảng members)
-      LEFT JOIN accounts a ON m.name = a.name
-      ORDER BY m.name ASC
-    `);
-
-    res.json(result.rows);
-  } catch (err) {
-    console.error("Database Query Error:", err.message);
-    res.status(500).json({
-      error: "Không thể lấy danh sách thành viên",
-      details: err.message,
-    });
-  }
-});
-
-// Thêm mới một thành viên vào cây gia phả
-app.post("/api/addmember", async (req, res) => {
-  try {
-    const {
-      name,
-      gender,
-      date_birth,
-      date_death,
-      note,
-      relationship,
-      father_id,
-      mother_id,
-    } = req.body;
-
-    if (!name || !gender) {
-      return res.status(400).json({ error: "Tên và giới tính là bắt buộc" });
-    }
-
-    // Giá trị date_birth và date_death truyền vào sẽ là chuỗi 'YYYY-MM-DD' hoặc null
-    const result = await pool.query(
-      `
-      INSERT INTO members (name, gender, date_birth, date_death, note, relationship, father_id, mother_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING *
-    `,
-      [
-        name,
-        gender,
-        date_birth || null,
-        date_death || null,
-        note,
-        relationship || "Member",
-        father_id || null,
-        mother_id || null,
-      ],
-    );
-
-    res.status(201).json({
-      message: "Thêm thành viên thành công!",
-      member: result.rows[0],
-    });
-  } catch (err) {
-    console.error("Error adding member:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Lấy cấu trúc cây gia phả đệ quy (phục vụ cho việc vẽ sơ đồ hiển thị)
-app.get('/api/family_tree', async (req, res) => {
-  try {
-    const selectedGen = req.query.generation; 
-    
-    let queryText = `
-      WITH RECURSIVE family_tree AS (
-          SELECT id, name, father_id, mother_id, date_birth, date_death, male, female, 1 AS generation 
-          FROM members 
-          WHERE father_id IS NULL AND mother_id IS NULL
-          
-          UNION ALL
-
-          SELECT mb.id, mb.name, mb.father_id, mb.mother_id, mb.date_birth, mb.date_death, mb.male, mb.female, ft.generation + 1
-          FROM members mb
-          INNER JOIN family_tree ft ON mb.father_id = ft.id OR mb.mother_id = ft.id
-      )
-      SELECT DISTINCT id, name, father_id, mother_id, date_birth, date_death, male, female, generation 
-      FROM family_tree
-    `;
-
-    const queryParams = [];
-    if (selectedGen && selectedGen !== 'all') {
-      queryText += ` WHERE generation <= $1`;
-      queryParams.push(parseInt(selectedGen));
-    }
-    queryText += ` ORDER BY generation ASC, date_birth ASC`;
-
-    const result = await pool.query(queryText, queryParams);
-    const members = result.rows;
-
-    const nodeDataArray = [];
-    const linkDataArray = [];
-    const marriageSet = new Set(); 
-
-    members.forEach(m => {
-      // Xác định giới tính dạng text để GoJS tương tác dễ hơn nếu cần
-      const genderText = m.male === 1 ? "male" : (m.female === 1 ? "female" : "unknown");
-
-      nodeDataArray.push({
-        key: String(m.id), 
-        name: m.name,
-        birth: m.date_birth, // Trong ảnh DB của bạn giờ đã là DATE chuẩn (ví dụ "1930-01-01")
-        death: m.date_death,
-        gender: genderText,
-        generation: m.generation,
-        category: "MEMBER" 
-      });
-
-      if (m.father_id && m.mother_id) {
-        const marriageKey = `marriage_${m.father_id}_${m.mother_id}`;
-
-        if (!marriageSet.has(marriageKey)) {
-          marriageSet.add(marriageKey);
-
-          nodeDataArray.push({ 
-            key: marriageKey, 
-            category: "MARRIAGE" 
-          });
-
-          // Nối trực tiếp từ Bố sang Mẹ (SPOUSE) để ép ngang hàng
-          linkDataArray.push({
-            from: String(m.father_id),
-            to: String(m.mother_id),
-            category: "SPOUSE"
-          });
-
-          // Treo nút kết hôn ảo xuống dưới người Bố
-          linkDataArray.push({
-            from: String(m.father_id),
-            to: marriageKey,
-            category: "CHILD"
-          });
-        }
-
-        // Tẽ nhánh từ nút kết hôn ảo xuống các con
-        linkDataArray.push({ from: marriageKey, to: String(m.id), category: "CHILD" });
-
-      } else if (m.father_id || m.mother_id) {
-        const parentId = m.father_id || m.mother_id;
-        linkDataArray.push({ from: String(parentId), to: String(m.id), category: "CHILD" });
-      }
-    });
-
-    res.json({ nodeDataArray, linkDataArray });
-
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
-//Search API them thanh vien cho phan add member
-app.get("/api/addmember/search", async (req, res) => {
-  try {
-    const keyword = req.query.q ? req.query.q.trim() : "";
-
-    if (!keyword) {
-      return res.json([]);
-    }
-
-    const searchPattern = `%${keyword}%`;
-
-    const sqlQuery = `
-            SELECT 
-                m.id, 
-                m.name,
-                TO_CHAR(m.date_birth, 'YYYY') AS date_birth, 
-                (
-                    SELECT DISTINCT s.name 
-                    FROM members s 
-                    WHERE (s.father_id = m.id AND s.mother_id IS NOT NULL AND s.mother_id <> m.id)
-                       OR (s.mother_id = m.id AND s.father_id IS NOT NULL AND s.father_id <> m.id)
-                    LIMIT 1
-                ) AS spouse_name
-            FROM members m
-            WHERE m.name ILIKE $1 
-               OR TO_CHAR(m.date_birth, 'DD/MM/YYYY') LIKE $1
-               OR TO_CHAR(m.date_birth, 'YYYY') LIKE $1
-            ORDER BY m.date_birth DESC
-            LIMIT 5;
-        `;
-
-    const result = await pool.query(sqlQuery, [searchPattern]);
-    res.json(result.rows);
-  } catch (error) {
-    console.error("Error when fetching search results:", error);
-    res.status(500).json({ error: "Server error." });
-  }
-});
-// API Endpoint: GET /api/statistics
-// ==========================================
-app.get('/api/statistics', async (req, res) => {
-  try {
-    // 1. Tính tổng bằng SUM trực tiếp trên cột male và female cực kỳ tối ưu
-    const summaryQuery = await pool.query(`
-      SELECT 
-        COUNT(*) as total,
-        SUM(male) as male,
-        SUM(female) as female
-      FROM members
-    `);
-    const summary = summaryQuery.rows[0];
-
-    // 2. Lấy phân bổ thế hệ
-    const generationQuery = await pool.query(`
-      WITH RECURSIVE family_tree AS (
-          SELECT id, father_id, mother_id, 1 AS generation 
-          FROM members 
-          WHERE father_id IS NULL AND mother_id IS NULL
-          
-          UNION ALL
-
-          SELECT mb.id, mb.father_id, mb.mother_id, ft.generation + 1
-          FROM members mb
-          INNER JOIN family_tree ft ON mb.father_id = ft.id OR mb.mother_id = ft.id
-      )
-      SELECT generation, COUNT(*) as count 
-      FROM family_tree 
-      GROUP BY generation 
-      ORDER BY generation ASC
-    `);
-    
-    const generations = generationQuery.rows;
-    const maxGeneration = generations.length > 0 ? generations[generations.length - 1].generation : 0;
-
-    res.json({
-      total: parseInt(summary.total || 0),
-      male: parseInt(summary.male || 0),
-      female: parseInt(summary.female || 0),
-      maxGeneration: maxGeneration,
-      generationData: generations.map(g => ({
-        label: `Generation ${g.generation}`,
-        count: parseInt(g.count)
-      }))
-    });
-
-  } catch (err) {
-    console.error("Error fetching statistics:", err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 1. API: Lấy thông tin chi tiết một thành viên (bao gồm Cha, Mẹ, Vợ/Chồng, Con cái, Gmail và Vai trò)
-app.get("/api/members/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Lấy thông tin cá nhân và vai trò
-    const memberQuery = await pool.query(`
-      SELECT 
-        m.*,
-        CASE 
-          WHEN m.male = 1 THEN 'Nam'
-          WHEN m.female = 1 THEN 'Nữ'
-          ELSE 'Khác'
-        END AS gender_text,
-        CASE 
-          WHEN a.id = 1 THEN 'Admin'
-          WHEN a.id IS NOT NULL THEN 'Member'
-          ELSE 'Guest'
-        END AS role,
-        (SELECT name FROM members WHERE id = m.father_id) AS father_name,
-        (SELECT name FROM members WHERE id = m.mother_id) AS mother_name
-      FROM members m
-      LEFT JOIN accounts a ON m.name = a.name
-      WHERE m.id = $1
-    `, [id]);
-
-    if (memberQuery.rows.length === 0) {
-      return res.status(404).json({ error: "Không tìm thấy thành viên này." });
-    }
-
-    const member = memberQuery.rows[0];
-
-    // Lấy danh sách con cái
-    const childrenQuery = await pool.query(`
-      SELECT id, name FROM members 
-      WHERE father_id = $1 OR mother_id = $1
-      ORDER BY date_birth ASC
-    `, [id]);
-
-    // Lấy thông tin vợ/chồng (tạm tính dựa trên việc có chung con)
-    const spouseQuery = await pool.query(`
-      SELECT DISTINCT s.id, s.name 
-      FROM members s
-      WHERE s.id IN (
-        SELECT DISTINCT CASE WHEN father_id = $1 THEN mother_id ELSE father_id END
-        FROM members
-        WHERE (father_id = $1 AND mother_id IS NOT NULL) OR (mother_id = $1 AND father_id IS NOT NULL)
-      )
-    `, [id]);
-
-    res.json({
-      ...member,
-      spouse_name: spouseQuery.rows.length > 0 ? spouseQuery.rows[0].name : "---",
-      children: childrenQuery.rows
-    });
-
-  } catch (err) {
-    console.error("Error detailed member:", err.message);
-    res.status(500).json({ error: "Lỗi Server", details: err.message });
-  }
-});
-
-// 2. API: Cập nhật thông tin trực tiếp
-app.put("/api/members/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, gender, date_birth, note, gmail } = req.body;
-
-    const male = gender === "Nam" ? 1 : 0;
-    const female = gender === "Nữ" ? 1 : 0;
-
-    await pool.query(`
-      UPDATE members 
-      SET 
-        name = $1, 
-        male = $2, 
-        female = $3, 
-        date_birth = $4, 
-        note = $5,
-        gmail = $6
-      WHERE id = $7
-    `, [name, male, female, date_birth || null, note || null, gmail || null, id]);
-
-    res.json({ message: "Cập nhật thành công!" });
-  } catch (err) {
-    console.error("Error updating member:", err.message);
-    res.status(500).json({ error: "Không thể cập nhật thông tin." });
-  }
-});
-
-// ==========================================
-// SETTINGS APIs (CÀI ĐẶT HỆ THỐNG & TÀI KHOẢN)
-// ==========================================
-
-// 1. Lấy thông tin cấu hình hiện tại của một tài khoản cụ thể
-app.get("/api/settings/account/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await pool.query("SELECT id, name, email, username, member_id FROM accounts WHERE id = $1", [id]);
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Tài khoản không tồn tại" });
-    }
-    res.json(result.rows[0]);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 2. Cập nhật Thông tin & Liên kết Thành viên Gia phả
-app.put("/api/settings/account/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, email, member_id } = req.body;
-
-    await pool.query(
-      "UPDATE accounts SET name = $1, email = $2, member_id = $3 WHERE id = $4",
-      [name, email, member_id, id]
-    );
-
-    res.json({ message: "Cập nhật cấu hình tài khoản thành công!" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 3. API Đổi mật khẩu an toàn (Bcrypt mã hóa)
-app.put("/api/settings/password/:id", async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { oldPassword, newPassword } = req.body;
-
-    const userQuery = await pool.query("SELECT password FROM accounts WHERE id = $1", [id]);
-    if (userQuery.rows.length === 0) {
-      return res.status(404).json({ error: "User không tồn tại" });
-    }
-
-    const correct = await bcrypt.compare(oldPassword, userQuery.rows[0].password);
-    if (!correct) {
-      return res.status(400).json({ error: "Mật khẩu hiện tại không chính xác!" });
-    }
-
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-    await pool.query("UPDATE accounts SET password = $1 WHERE id = $2", [hashedNewPassword, id]);
-
-    res.json({ message: "Thay đổi mật khẩu thành công!" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 4. API Sao lưu toàn bộ dữ liệu (Chỉ Admin gọi)
-app.get("/api/admin/backup", async (req, res) => {
-  try {
-    const membersData = await pool.query("SELECT * FROM members ORDER BY id ASC");
-    const accountsData = await pool.query("SELECT id, name, email, username, member_id FROM accounts");
-    
-    res.json({
-      backup_version: "1.0",
-      timestamp: new Date(),
-      members: membersData.rows,
-      accounts: accountsData.rows
-    });
-  } catch (err) {
-    res.status(500).json({ error: "Lỗi sao lưu hệ thống: " + err.message });
-  }
-});
-
-// Giả định ID người dùng đang đăng nhập (Khi làm thực tế, lấy từ req.user.id sau khi xác thực)
-const getCurrentUserId = (req) => 3; 
-
-// [GET] Lấy thông tin hồ sơ từ PostgreSQL bao gồm cả việc truy vấn tên Cha/Mẹ từ mối quan hệ trực hệ
-app.get('/api/user/profile', async (req, res) => {
-  const userId = getCurrentUserId(req);
-
-  try {
-    // Câu lệnh SQL nâng cao tự động lấy thêm tên của Cha và Mẹ từ liên kết id nội bộ
-    const queryText = `
-      SELECT 
-        u.*,
-        f.name AS father_name,
-        m.name AS mother_name
-      FROM members u
-      LEFT JOIN members f ON u.father_id = f.id
-      LEFT JOIN members m ON u.mother_id = m.id
-      WHERE u.id = $1
-    `;
-    
-    const result = await pool.query(queryText, [userId]);
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, message: "Không tìm thấy thành viên." });
-    }
-
-    const member = result.rows[0];
-
-    // Ánh xạ dữ liệu trả về cho Client khớp với cấu trúc trường trong DB của bạn
-    res.json({
-      id: member.id,
-      name: member.name,
-      date_birth: member.date_birth,
-      avatar_url: member.avatar_url,
-      gmail: member.gmail,
-      gender: member.male === 1 ? "Nam" : (member.female === 1 ? "Nữ" : "Khác"),
-      father_name: member.father_name || "Chưa rõ",
-      mother_name: member.mother_name || "Chưa rõ"
-    });
-
-  } catch (error) {
-    console.error("Lỗi Database:", error);
-    res.status(500).json({ success: false, message: "Lỗi kết nối cơ sơ dữ liệu." });
-  }
-});
-
-// [PUT] Cập nhật dữ liệu từ form chỉnh sửa trực tiếp vào PostgreSQL
-app.put('/api/user/profile', async (req, res) => {
-  const userId = getCurrentUserId(req);
-  const { name, date_birth, gender, gmail } = req.body;
-
-  // Xử lý chuyển đổi giới tính về định dạng kiểu số (male/female) như thiết kế DB của bạn
-  const male = (gender === "Nam") ? 1 : 0;
-  const female = (gender === "Nữ") ? 1 : 0;
-
-  try {
-    const updateText = `
-      UPDATE members 
-      SET name = $1, date_birth = $2, male = $3, female = $4, gmail = $5
-      WHERE id = $6
-    `;
-    
-    await pool.query(updateText, [name, date_birth, male, female, gmail, userId]);
-    res.json({ success: true, message: "Đã cập nhật cơ sở dữ liệu thành công!" });
-
-  } catch (error) {
-    console.error("Lỗi khi update DB:", error);
-    res.status(500).json({ success: false, message: "Không thể ghi dữ liệu mới vào hệ thống." });
-  }
-});
-
-app.listen(PORT, () => {
-  console.log(`Server kết nối PostgreSQL đang chạy tại: http://localhost:${PORT}`);
-});
-
-// Cấu hình các thư mục tĩnh chứa file giao diện (HTML, CSS, JS công khai)
 app.use(express.static(path.join(__dirname, "public")));
 
 // ==========================================
-// VIEW ROUTES (ĐIỀU HƯỚNG GIAO DIỆN)
+// REGISTER
 // ==========================================
-app.get("/main", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "mainpage", "index.html"));
+
+app.post("/register", async (req, res) => {
+
+    try {
+
+        const {
+            name,
+            email,
+            username,
+            password
+        } = req.body;
+
+        if (
+            !name ||
+            !email ||
+            !username ||
+            !password
+        ) {
+
+            return res.status(400).json({
+                success: false,
+                message: "Vui lòng nhập đầy đủ thông tin."
+            });
+
+        }
+
+        // Validate định dạng và độ dài (SEC-8: presence-only là chưa đủ)
+        const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (name.length > 100) {
+            return res.status(400).json({
+                success: false,
+                message: "Họ tên tối đa 100 ký tự."
+            });
+        }
+
+        if (username.length < 3 || username.length > 50) {
+            return res.status(400).json({
+                success: false,
+                message: "Tên đăng nhập phải từ 3 đến 50 ký tự."
+            });
+        }
+
+        if (!EMAIL_REGEX.test(email) || email.length > 150) {
+            return res.status(400).json({
+                success: false,
+                message: "Email không đúng định dạng."
+            });
+        }
+
+        if (password.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: "Mật khẩu phải có ít nhất 8 ký tự."
+            });
+        }
+
+        const checkUser = await pool.query(
+            `
+            SELECT *
+            FROM accounts
+            WHERE username = $1
+               OR email = $2
+            `,
+            [username, email]
+        );
+
+        if (checkUser.rows.length > 0) {
+
+            return res.status(400).json({
+                success: false,
+                message: "Username hoặc Email đã tồn tại."
+            });
+
+        }
+
+        const hashedPassword =
+            await bcrypt.hash(password, 10);
+
+        const result = await pool.query(
+            `
+            INSERT INTO accounts
+            (
+                username,
+                password,
+                name,
+                email,
+                role_id,
+                is_active
+            )
+            VALUES
+            (
+                $1,
+                $2,
+                $3,
+                $4,
+                2,
+                TRUE
+            )
+            RETURNING
+            id,
+            username,
+            name,
+            email
+            `,
+            [
+                username,
+                hashedPassword,
+                name,
+                email
+            ]
+        );
+
+        res.status(201).json({
+
+            success: true,
+
+            message: "Đăng ký thành công.",
+
+            user: result.rows[0]
+
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+
+            success: false,
+
+            message: "Lỗi Server"
+
+        });
+
+    }
+
 });
 
-app.get("/mainpage", (req, res) => {
-  res.redirect("/main");
+// ==========================================
+// LOGIN
+// ==========================================
+
+// ==========================================
+// CHỐNG BRUTE-FORCE ĐĂNG NHẬP (rate limit đơn giản trong bộ nhớ)
+// ==========================================
+
+const loginAttempts = new Map(); // key: username|ip -> { count, firstAt }
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_WINDOW_MS = 15 * 60 * 1000; // 15 phút
+
+function isLoginRateLimited(key) {
+    const rec = loginAttempts.get(key);
+    if (!rec) return false;
+
+    if (Date.now() - rec.firstAt > LOGIN_WINDOW_MS) {
+        loginAttempts.delete(key);
+        return false;
+    }
+
+    return rec.count >= LOGIN_MAX_ATTEMPTS;
+}
+
+function recordLoginFailure(key) {
+    const rec = loginAttempts.get(key);
+
+    if (!rec || Date.now() - rec.firstAt > LOGIN_WINDOW_MS) {
+        loginAttempts.set(key, { count: 1, firstAt: Date.now() });
+    } else {
+        rec.count += 1;
+    }
+}
+
+function clearLoginFailures(key) {
+    loginAttempts.delete(key);
+}
+
+app.post("/api/login", async (req, res) => {
+
+    try {
+
+        const {
+            username,
+            password
+        } = req.body;
+
+        const rateLimitKey = `${username}|${req.ip}`;
+
+        if (isLoginRateLimited(rateLimitKey)) {
+            return res.status(429).json({
+                success: false,
+                message: "Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút."
+            });
+        }
+
+        const result = await pool.query(
+            `
+            SELECT
+                a.id,
+                a.username,
+                a.password,
+                a.name,
+                a.email,
+                a.member_id,
+                r.role_name
+            FROM accounts a
+            JOIN roles r
+                ON a.role_id = r.id
+            WHERE a.username = $1
+              AND a.is_active = TRUE
+            `,
+            [username]
+        );
+
+        if (result.rows.length === 0) {
+
+            recordLoginFailure(rateLimitKey);
+
+            return res.status(401).json({
+
+                success: false,
+
+                message: "Sai tài khoản hoặc mật khẩu."
+
+            });
+
+        }
+
+        const user = result.rows[0];
+
+        const match =
+            await bcrypt.compare(
+                password,
+                user.password
+            );
+
+        if (!match) {
+
+            recordLoginFailure(rateLimitKey);
+
+            return res.status(401).json({
+
+                success: false,
+
+                message: "Sai tài khoản hoặc mật khẩu."
+
+            });
+
+        }
+
+        clearLoginFailures(rateLimitKey);
+
+        const token = jwt.sign(
+
+            {
+
+                id: user.id,
+
+                role: user.role_name,
+
+                memberId: user.member_id
+
+            },
+
+            process.env.JWT_SECRET,
+
+
+            {
+
+                expiresIn: "7d"
+
+            }
+
+        );
+
+        // Lưu token vào cookie httpOnly thay vì trả về trong JSON body.
+        // JavaScript phía trình duyệt KHÔNG đọc được cookie httpOnly, nên nếu
+        // trang web có bị dính XSS thì kẻ tấn công cũng không lấy được token.
+        res.cookie("token", token, {
+
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production", // bắt buộc HTTPS khi lên production
+            sameSite: "lax",
+            maxAge: 7 * 24 * 60 * 60 * 1000 // khớp với expiresIn của JWT (7 ngày)
+
+        });
+
+        res.json({
+
+            success: true,
+
+            user: {
+
+                id: user.id,
+
+                username: user.username,
+
+                name: user.name,
+
+                email: user.email,
+
+                role: user.role_name,
+
+                memberId: user.member_id
+
+            }
+
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+
+            success: false,
+
+            message: "Server Error"
+
+        });
+
+    }
+
 });
+
 // ==========================================
+// ĐĂNG XUẤT
+// ==========================================
+
+app.post("/api/logout", (req, res) => {
+
+    res.clearCookie("token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax"
+    });
+
+    res.json({
+        success: true,
+        message: "Đã đăng xuất."
+    });
+
+});
+
+// ==========================================
+// CẬP NHẬT THÀNH VIÊN
+// ==========================================
+
+app.put(
+    "/api/members/:id",
+    verifyToken,
+    isAdmin,
+    async (req, res) => {
+
+        try {
+
+            const { id } = req.params;
+
+            const {
+
+                name,
+                gender,
+                father_id,
+                mother_id,
+                date_birth,
+                date_death,
+                gmail,
+                phone,
+                address,
+                biography,
+                note,
+                avatar_url,
+                birth_order
+
+            } = req.body;
+
+            // Dùng COALESCE để chỉ ghi đè field nào thực sự được gửi lên,
+            // tránh xóa mất dữ liệu cũ khi form chỉ gửi 1 phần thông tin
+            // (ví dụ form sửa nhanh ở trang Information chỉ gửi vài field).
+            await pool.query(
+
+                `
+                UPDATE members
+                SET
+
+                    name=COALESCE($1, name),
+                    gender=COALESCE($2, gender),
+                    father_id=COALESCE($3, father_id),
+                    mother_id=COALESCE($4, mother_id),
+                    date_birth=COALESCE($5, date_birth),
+                    date_death=COALESCE($6, date_death),
+                    gmail=COALESCE($7, gmail),
+                    phone=COALESCE($8, phone),
+                    address=COALESCE($9, address),
+                    biography=COALESCE($10, biography),
+                    note=COALESCE($11, note),
+                    avatar_url=COALESCE($12, avatar_url),
+                    birth_order=COALESCE($13, birth_order),
+                    updated_at=CURRENT_TIMESTAMP
+
+                WHERE id=$14
+                `,
+
+                [
+
+                    name || null,
+                    gender || null,
+                    father_id || null,
+                    mother_id || null,
+                    date_birth || null,
+                    date_death || null,
+                    gmail || null,
+                    phone || null,
+                    address || null,
+                    biography || null,
+                    note || null,
+                    avatar_url || null,
+                    birth_order || null,
+                    id
+
+                ]
+
+            );
+
+            res.json({
+
+                success: true,
+
+                message: "Cập nhật thành công."
+
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+
+                success: false,
+
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+
+            });
+
+        }
+
+    }
+
+);
+
+
+// ==========================================
+// XÓA THÀNH VIÊN
+// ==========================================
+
+app.delete(
+    "/api/members/:id",
+    verifyToken,
+    isAdmin,
+    async (req, res) => {
+
+        try {
+
+            const { id } = req.params;
+
+            await pool.query(
+
+                `
+                DELETE FROM members
+                WHERE id=$1
+                `,
+
+                [id]
+
+            );
+
+            res.json({
+
+                success: true,
+
+                message: "Đã xóa thành viên."
+
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+
+                success: false,
+
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+
+            });
+
+        }
+
+    }
+
+);
+
+
+// ==========================================
+// DANH SÁCH THÀNH VIÊN (mọi user đã đăng nhập được xem)
+// ==========================================
+
+app.get(
+    "/api/members",
+    verifyToken,
+    isMember,
+    async (req, res) => {
+
+        try {
+
+            const result = await pool.query(
+                `
+                SELECT
+                    m.id,
+                    m.name,
+                    m.gender,
+                    m.date_birth,
+                    m.date_death,
+                    m.avatar_url,
+                    father.name AS father_name,
+                    mother.name AS mother_name,
+                    r.role_name AS role
+                FROM members m
+                LEFT JOIN members father
+                    ON father.id = m.father_id
+                LEFT JOIN members mother
+                    ON mother.id = m.mother_id
+                LEFT JOIN accounts a
+                    ON a.member_id = m.id
+                LEFT JOIN roles r
+                    ON r.id = a.role_id
+                ORDER BY m.id
+                `
+            );
+
+            res.json(result.rows);
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+                success: false,
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+            });
+
+        }
+
+    }
+
+);
+
+
+// ==========================================
+// CHI TIẾT MỘT THÀNH VIÊN (mọi user đã đăng nhập được xem)
+// ==========================================
+
+app.get(
+    "/api/members/:id",
+    verifyToken,
+    isMember,
+    async (req, res) => {
+
+        try {
+
+            const { id } = req.params;
+
+            const result = await pool.query(
+                `
+                SELECT
+                    m.*,
+                    father.name AS father_name,
+                    mother.name AS mother_name,
+                    r.role_name AS role
+                FROM members m
+                LEFT JOIN members father
+                    ON father.id = m.father_id
+                LEFT JOIN members mother
+                    ON mother.id = m.mother_id
+                LEFT JOIN accounts a
+                    ON a.member_id = m.id
+                LEFT JOIN roles r
+                    ON r.id = a.role_id
+                WHERE m.id = $1
+                `,
+                [id]
+            );
+
+            if (result.rows.length === 0) {
+
+                return res.status(404).json({
+                    success: false,
+                    message: "Không tìm thấy thành viên."
+                });
+
+            }
+
+            const children = await pool.query(
+                `
+                SELECT id, name
+                FROM members
+                WHERE father_id = $1
+                   OR mother_id = $1
+                ORDER BY birth_order NULLS LAST, date_birth
+                `,
+                [id]
+            );
+
+            // Vợ/chồng: lấy trực tiếp từ bảng marriages (không suy đoán qua con chung),
+            // ưu tiên cuộc hôn nhân chưa kết thúc (ended_on IS NULL), mới nhất trước.
+            const spouse = await pool.query(
+                `
+                SELECT sp.id, sp.name, mg.married_on, mg.ended_on
+                FROM marriages mg
+                JOIN members sp
+                    ON sp.id = CASE
+                        WHEN mg.spouse1_id = $1 THEN mg.spouse2_id
+                        ELSE mg.spouse1_id
+                    END
+                WHERE $1 IN (mg.spouse1_id, mg.spouse2_id)
+                ORDER BY mg.ended_on IS NOT NULL, mg.married_on DESC NULLS LAST
+                LIMIT 1
+                `,
+                [id]
+            );
+
+            res.json({
+                ...result.rows[0],
+                spouse_name: spouse.rows[0]?.name || null,
+                children: children.rows
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+                success: false,
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+            });
+
+        }
+
+    }
+
+);
+
+
+// ==========================================
+// THÊM THÀNH VIÊN (chỉ Admin)
+// ==========================================
+
+app.post(
+    "/api/addmember",
+    verifyToken,
+    isAdmin,
+    async (req, res) => {
+
+        try {
+
+            const {
+                name,
+                gender,
+                father_id,
+                mother_id,
+                date_birth,
+                date_death,
+                gmail,
+                phone,
+                address,
+                biography,
+                note,
+                avatar_url,
+                birth_order
+            } = req.body;
+
+            if (!name || !gender) {
+
+                return res.status(400).json({
+                    success: false,
+                    message: "Vui lòng nhập Họ tên và Giới tính."
+                });
+
+            }
+
+            if (name.length > 100) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Họ tên tối đa 100 ký tự."
+                });
+            }
+
+            if (!["Male", "Female"].includes(gender)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Giới tính không hợp lệ."
+                });
+            }
+
+            const result = await pool.query(
+                `
+                INSERT INTO members
+                (
+                    name,
+                    gender,
+                    father_id,
+                    mother_id,
+                    date_birth,
+                    date_death,
+                    gmail,
+                    phone,
+                    address,
+                    biography,
+                    note,
+                    avatar_url,
+                    birth_order
+                )
+                VALUES
+                ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                RETURNING *
+                `,
+                [
+                    name,
+                    gender,
+                    father_id || null,
+                    mother_id || null,
+                    date_birth || null,
+                    date_death || null,
+                    gmail || null,
+                    phone || null,
+                    address || null,
+                    biography || null,
+                    note || null,
+                    avatar_url || null,
+                    birth_order || null
+                ]
+            );
+
+            res.status(201).json({
+                success: true,
+                message: "Thêm thành viên thành công.",
+                member: result.rows[0]
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+                success: false,
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+            });
+
+        }
+
+    }
+
+);
+
+
+// ==========================================
+// SEARCH MEMBER
+// ==========================================
+
+app.get(
+    "/api/addmember/search",
+    verifyToken,
+    async (req, res) => {
+
+        try {
+
+            const keyword = (req.query.q || "").trim();
+
+            if (!keyword) {
+
+                return res.json([]);
+
+            }
+
+            const result = await pool.query(
+
+                `
+                SELECT
+
+                    id,
+                    name,
+                    gender,
+                    date_birth
+
+                FROM members
+
+                WHERE
+
+                    name ILIKE $1
+
+                ORDER BY
+
+                    name ASC
+
+                LIMIT 10
+                `,
+
+                [`%${keyword}%`]
+
+            );
+
+            res.json(result.rows);
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+
+                success: false,
+
+                message: "Lỗi tìm kiếm."
+
+            });
+
+        }
+
+    }
+
+);
+// ==========================================
+// FAMILY TREE API
+// ==========================================
+
+app.get(
+    "/api/family_tree",
+    verifyToken,
+    isMember,
+    async (req, res) => {
+
+        try {
+
+            const generation = req.query.generation || "all";
+
+            let sql = `
+
+                WITH RECURSIVE family_tree AS (
+
+                    SELECT
+
+                        id,
+                        name,
+                        father_id,
+                        mother_id,
+                        gender,
+                        date_birth,
+                        date_death,
+                        1 AS generation
+
+                    FROM members
+
+                    WHERE father_id IS NULL
+                      AND mother_id IS NULL
+
+                    UNION ALL
+
+                    SELECT
+
+                        m.id,
+                        m.name,
+                        m.father_id,
+                        m.mother_id,
+                        m.gender,
+                        m.date_birth,
+                        m.date_death,
+                        ft.generation + 1
+
+                    FROM members m
+
+                    INNER JOIN family_tree ft
+
+                    ON
+
+                        m.father_id = ft.id
+
+                        OR
+
+                        m.mother_id = ft.id
+
+                )
+
+                SELECT *
+
+                FROM family_tree
+
+            `;
+
+            const params = [];
+
+            if (generation !== "all") {
+
+                sql += " WHERE generation <= $1";
+
+                params.push(Number(generation));
+
+            }
+
+            sql += `
+                ORDER BY
+                generation,
+                date_birth,
+                id
+            `;
+
+            const result = await pool.query(sql, params);
+
+            const members = result.rows;
+
+            const nodeDataArray = [];
+
+            const linkDataArray = [];
+
+            const marriageSet = new Set();
+
+            members.forEach(member => {
+
+                nodeDataArray.push({
+
+                    key: String(member.id),
+
+                    name: member.name,
+
+                    gender: member.gender,
+
+                    birth: member.date_birth,
+
+                    death: member.date_death,
+
+                    generation: member.generation,
+
+                    category: "MEMBER"
+
+                });
+
+            });
+
+            members.forEach(member => {
+
+                if (
+                    member.father_id &&
+                    member.mother_id
+                ) {
+
+                    const marriageKey =
+                        `marriage_${member.father_id}_${member.mother_id}`;
+
+                    if (!marriageSet.has(marriageKey)) {
+
+                        marriageSet.add(marriageKey);
+
+                        nodeDataArray.push({
+
+                            key: marriageKey,
+
+                            category: "MARRIAGE"
+
+                        });
+
+                        linkDataArray.push({
+
+                            from: String(member.father_id),
+
+                            to: String(member.mother_id),
+
+                            category: "SPOUSE"
+
+                        });
+
+                        linkDataArray.push({
+
+                            from: String(member.father_id),
+
+                            to: marriageKey,
+
+                            category: "CHILD"
+
+                        });
+
+                    }
+
+                    linkDataArray.push({
+
+                        from: marriageKey,
+
+                        to: String(member.id),
+
+                        category: "CHILD"
+
+                    });
+
+                }
+
+                else {
+
+                    if (member.father_id) {
+
+                        linkDataArray.push({
+
+                            from: String(member.father_id),
+
+                            to: String(member.id),
+
+                            category: "CHILD"
+
+                        });
+
+                    }
+
+                    if (member.mother_id) {
+
+                        linkDataArray.push({
+
+                            from: String(member.mother_id),
+
+                            to: String(member.id),
+
+                            category: "CHILD"
+
+                        });
+
+                    }
+
+                }
+
+            });
+
+            res.json({
+
+                success: true,
+
+                nodeDataArray,
+
+                linkDataArray
+
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+
+                success: false,
+
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+
+            });
+
+        }
+
+    }
+
+);
+// ==========================================
+// PROFILE APIs
+// ==========================================
+
+// Lấy thông tin hồ sơ của người đang đăng nhập
+app.get(
+    "/api/user/profile",
+    verifyToken,
+    async (req, res) => {
+
+        try {
+
+            const memberId = req.user.memberId;
+
+            if (!memberId) {
+
+                return res.status(404).json({
+
+                    success: false,
+
+                    message: "Tài khoản chưa liên kết thành viên."
+
+                });
+
+            }
+
+            const result = await pool.query(
+
+                `
+                SELECT
+
+                    m.id,
+                    m.name,
+                    m.gender,
+                    m.date_birth,
+                    m.date_death,
+                    m.gmail,
+                    m.phone,
+                    m.address,
+                    m.avatar_url,
+                    m.biography,
+
+                    father.name AS father_name,
+                    mother.name AS mother_name
+
+                FROM members m
+
+                LEFT JOIN members father
+                    ON father.id = m.father_id
+
+                LEFT JOIN members mother
+                    ON mother.id = m.mother_id
+
+                WHERE m.id = $1
+                `,
+
+                [memberId]
+
+            );
+
+            if (result.rows.length === 0) {
+
+                return res.status(404).json({
+
+                    success: false,
+
+                    message: "Không tìm thấy thành viên."
+
+                });
+
+            }
+
+            res.json({
+
+                success: true,
+
+                profile: result.rows[0]
+
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+
+                success: false,
+
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+
+            });
+
+        }
+
+    }
+
+);
+
+
+// ==========================================
+// CẬP NHẬT HỒ SƠ
+// ==========================================
+
+app.put(
+    "/api/user/profile",
+    verifyToken,
+    async (req, res) => {
+
+        try {
+
+            const memberId = req.user.memberId;
+
+            const {
+
+                name,
+                gender,
+                date_birth,
+                date_death,
+                gmail,
+                phone,
+                address,
+                biography,
+                avatar_url
+
+            } = req.body;
+
+            await pool.query(
+
+                `
+                UPDATE members
+
+                SET
+
+                    name = $1,
+
+                    gender = $2,
+
+                    date_birth = $3,
+
+                    date_death = $4,
+
+                    gmail = $5,
+
+                    phone = $6,
+
+                    address = $7,
+
+                    biography = $8,
+
+                    avatar_url = $9,
+
+                    updated_at = CURRENT_TIMESTAMP
+
+                WHERE id = $10
+                `,
+
+                [
+
+                    name,
+
+                    gender,
+
+                    date_birth || null,
+
+                    date_death || null,
+
+                    gmail || null,
+
+                    phone || null,
+
+                    address || null,
+
+                    biography || null,
+
+                    avatar_url || null,
+
+                    memberId
+
+                ]
+
+            );
+
+            res.json({
+
+                success: true,
+
+                message: "Cập nhật hồ sơ thành công."
+
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+
+                success: false,
+
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+
+            });
+
+        }
+
+    }
+
+);
+
+
+// ==========================================
+// LẤY THÔNG TIN ACCOUNT
+// ==========================================
+
+app.get(
+    "/api/user/account",
+    verifyToken,
+    async (req, res) => {
+
+        try {
+
+            const result = await pool.query(
+
+                `
+                SELECT
+
+                    id,
+
+                    username,
+
+                    name,
+
+                    email,
+
+                    role_id,
+
+                    member_id,
+
+                    is_active,
+
+                    created_at
+
+                FROM accounts
+
+                WHERE id = $1
+                `,
+
+                [req.user.id]
+
+            );
+
+            if (result.rows.length === 0) {
+
+                return res.status(404).json({
+
+                    success: false,
+
+                    message: "Không tìm thấy tài khoản."
+
+                });
+
+            }
+
+            res.json({
+
+                success: true,
+
+                account: result.rows[0]
+
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+
+                success: false,
+
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+
+            });
+
+        }
+
+    }
+
+);// ==========================================
+// 3C. SETTINGS + BACKUP + PROFILE APIs
+// ==========================================
+
+// Lấy thông tin tài khoản
+app.get("/api/settings/account/:id", verifyToken, async (req, res) => {
+    try {
+
+        const { id } = req.params;
+
+        // Chỉ chính chủ tài khoản hoặc Admin mới được xem
+        if (
+            String(req.user.id) !== String(id) &&
+            req.user.role !== "Admin"
+        ) {
+            return res.status(403).json({
+                message: "Bạn không có quyền xem tài khoản này."
+            });
+        }
+
+        const result = await pool.query(
+            `SELECT id, name, email, username, member_id
+             FROM accounts
+             WHERE id = $1`,
+            [id]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({
+                message: "Không tìm thấy tài khoản"
+            });
+        }
+
+        res.json(result.rows[0]);
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+            message: "Server Error"
+        });
+
+    }
+});
+
+// Cập nhật thông tin tài khoản
+app.put("/api/settings/account/:id", verifyToken, async (req, res) => {
+
+    try {
+
+        const { id } = req.params;
+
+        // Chỉ chính chủ tài khoản hoặc Admin mới được sửa
+        if (
+            String(req.user.id) !== String(id) &&
+            req.user.role !== "Admin"
+        ) {
+            return res.status(403).json({
+                message: "Bạn không có quyền sửa tài khoản này."
+            });
+        }
+
+        const { name, email, member_id } = req.body;
+
+        await pool.query(
+            `UPDATE accounts
+             SET
+                name=$1,
+                email=$2,
+                member_id=$3,
+                updated_at=NOW()
+             WHERE id=$4`,
+            [
+                name,
+                email,
+                member_id || null,
+                id
+            ]
+        );
+
+        res.json({
+            message: "Cập nhật thành công"
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+            message: "Server Error"
+        });
+
+    }
+
+});
+
+// Đổi mật khẩu
+app.put("/api/settings/password/:id", verifyToken, async (req, res) => {
+
+    try {
+
+        const { id } = req.params;
+
+        // Chỉ chính chủ tài khoản mới được đổi mật khẩu của mình
+        // (kể cả Admin cũng không được đổi mật khẩu người khác qua API này)
+        if (String(req.user.id) !== String(id)) {
+            return res.status(403).json({
+                message: "Bạn không có quyền đổi mật khẩu tài khoản này."
+            });
+        }
+
+        const { oldPassword, newPassword } = req.body;
+
+        const user = await pool.query(
+            "SELECT password FROM accounts WHERE id=$1",
+            [id]
+        );
+
+        if (user.rows.length === 0) {
+            return res.status(404).json({
+                message: "Không tìm thấy tài khoản"
+            });
+        }
+
+        const check = await bcrypt.compare(
+            oldPassword,
+            user.rows[0].password
+        );
+
+        if (!check) {
+
+            return res.status(400).json({
+                message: "Sai mật khẩu cũ"
+            });
+
+        }
+
+        const hash = await bcrypt.hash(newPassword, 10);
+
+        await pool.query(
+            `UPDATE accounts
+             SET password=$1,
+                 updated_at=NOW()
+             WHERE id=$2`,
+            [hash, id]
+        );
+
+        res.json({
+            message: "Đổi mật khẩu thành công"
+        });
+
+    } catch (err) {
+
+        console.error(err);
+
+        res.status(500).json({
+            message: "Server Error"
+        });
+
+    }
+
+});
+
+// Backup (Admin)
+app.get(
+    "/api/admin/backup",
+    verifyToken,
+    isAdmin,
+    async (req, res) => {
+
+        try {
+
+            const members = await pool.query(
+                "SELECT * FROM members ORDER BY id"
+            );
+
+            const accounts = await pool.query(
+                `SELECT
+                    id,
+                    username,
+                    name,
+                    email,
+                    role_id,
+                    member_id
+                 FROM accounts`
+            );
+
+            res.json({
+
+                version: "1.0",
+
+                createdAt: new Date(),
+
+                members: members.rows,
+
+                accounts: accounts.rows
+
+            });
+
+        } catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+                message: "Backup failed"
+            });
+
+        }
+
+    }
+);
+
+// ==========================================
+// QUAN HỆ HÔN NHÂN (Relationships / marriages)
+// ==========================================
+
+// Danh sách tất cả các cặp vợ/chồng — mọi người đã đăng nhập đều xem được
+app.get(
+    "/api/relationships",
+    verifyToken,
+    isMember,
+    async (req, res) => {
+
+        try {
+
+            const result = await pool.query(
+                `
+                SELECT
+                    mg.id,
+                    mg.married_on,
+                    mg.ended_on,
+                    s1.id AS spouse1_id,
+                    s1.name AS spouse1_name,
+                    s2.id AS spouse2_id,
+                    s2.name AS spouse2_name
+                FROM marriages mg
+                JOIN members s1 ON s1.id = mg.spouse1_id
+                JOIN members s2 ON s2.id = mg.spouse2_id
+                ORDER BY mg.married_on DESC NULLS LAST, mg.id DESC
+                `
+            );
+
+            res.json(result.rows);
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+                success: false,
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+            });
+
+        }
+
+    }
+
+);
+
+// Thêm 1 cặp vợ/chồng mới — chỉ Admin
+app.post(
+    "/api/relationships",
+    verifyToken,
+    isAdmin,
+    async (req, res) => {
+
+        try {
+
+            const { spouse1_id, spouse2_id, married_on } = req.body;
+
+            if (!spouse1_id || !spouse2_id) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Vui lòng chọn đủ 2 thành viên."
+                });
+            }
+
+            if (String(spouse1_id) === String(spouse2_id)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Không thể chọn cùng 1 người cho cả 2 vai trò."
+                });
+            }
+
+            // Kiểm tra cả 2 id đều là thành viên có thật
+            const membersCheck = await pool.query(
+                `SELECT id FROM members WHERE id IN ($1, $2)`,
+                [spouse1_id, spouse2_id]
+            );
+
+            if (membersCheck.rows.length !== 2) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Thành viên được chọn không tồn tại."
+                });
+            }
+
+            // Tránh tạo trùng (cả 2 chiều spouse1/spouse2)
+            const dup = await pool.query(
+                `
+                SELECT id FROM marriages
+                WHERE (spouse1_id = $1 AND spouse2_id = $2)
+                   OR (spouse1_id = $2 AND spouse2_id = $1)
+                `,
+                [spouse1_id, spouse2_id]
+            );
+
+            if (dup.rows.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Cặp vợ chồng này đã tồn tại trong hệ thống."
+                });
+            }
+
+            const result = await pool.query(
+                `
+                INSERT INTO marriages (spouse1_id, spouse2_id, married_on)
+                VALUES ($1, $2, $3)
+                RETURNING *
+                `,
+                [spouse1_id, spouse2_id, married_on || null]
+            );
+
+            res.status(201).json({
+                success: true,
+                message: "Đã thêm quan hệ hôn nhân.",
+                marriage: result.rows[0]
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+                success: false,
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+            });
+
+        }
+
+    }
+
+);
+
+// Cập nhật (ví dụ đánh dấu ngày kết thúc hôn nhân) — chỉ Admin
+app.put(
+    "/api/relationships/:id",
+    verifyToken,
+    isAdmin,
+    async (req, res) => {
+
+        try {
+
+            const { id } = req.params;
+            const { married_on, ended_on } = req.body;
+
+            const result = await pool.query(
+                `
+                UPDATE marriages
+                SET
+                    married_on = COALESCE($1, married_on),
+                    ended_on = $2
+                WHERE id = $3
+                RETURNING *
+                `,
+                [married_on || null, ended_on || null, id]
+            );
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Không tìm thấy quan hệ này."
+                });
+            }
+
+            res.json({
+                success: true,
+                message: "Đã cập nhật.",
+                marriage: result.rows[0]
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+                success: false,
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+            });
+
+        }
+
+    }
+
+);
+
+// Xóa 1 quan hệ hôn nhân — chỉ Admin
+app.delete(
+    "/api/relationships/:id",
+    verifyToken,
+    isAdmin,
+    async (req, res) => {
+
+        try {
+
+            const { id } = req.params;
+
+            const result = await pool.query(
+                `DELETE FROM marriages WHERE id = $1 RETURNING id`,
+                [id]
+            );
+
+            if (result.rows.length === 0) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Không tìm thấy quan hệ này."
+                });
+            }
+
+            res.json({
+                success: true,
+                message: "Đã xóa quan hệ hôn nhân."
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+                success: false,
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+            });
+
+        }
+
+    }
+
+);
+
+// ==========================================
+// THỐNG KÊ (Statistics)
+// ==========================================
+
+app.get(
+    "/api/statistics",
+    verifyToken,
+    isAdmin,
+    async (req, res) => {
+
+        try {
+
+            const totalResult = await pool.query(
+                "SELECT COUNT(*)::int AS total FROM members"
+            );
+
+            const genderResult = await pool.query(
+                `
+                SELECT
+                    COALESCE(SUM(CASE WHEN gender = 'Male' THEN 1 ELSE 0 END), 0)::int AS male,
+                    COALESCE(SUM(CASE WHEN gender = 'Female' THEN 1 ELSE 0 END), 0)::int AS female
+                FROM members
+                `
+            );
+
+            const generationResult = await pool.query(
+                `
+                WITH RECURSIVE family_tree AS (
+                    SELECT id, 1 AS generation
+                    FROM members
+                    WHERE father_id IS NULL
+                      AND mother_id IS NULL
+
+                    UNION ALL
+
+                    SELECT m.id, ft.generation + 1
+                    FROM members m
+                    INNER JOIN family_tree ft
+                        ON m.father_id = ft.id
+                        OR m.mother_id = ft.id
+                )
+                SELECT
+                    generation,
+                    COUNT(*)::int AS count
+                FROM family_tree
+                GROUP BY generation
+                ORDER BY generation
+                `
+            );
+
+            const maxGeneration = generationResult.rows.length
+                ? Math.max(...generationResult.rows.map(r => r.generation))
+                : 0;
+
+            res.json({
+                success: true,
+                total: totalResult.rows[0].total,
+                male: genderResult.rows[0].male,
+                female: genderResult.rows[0].female,
+                maxGeneration,
+                generationData: generationResult.rows.map(r => ({
+                    label: `Thế hệ ${r.generation}`,
+                    count: r.count
+                }))
+            });
+
+        }
+
+        catch (err) {
+
+            console.error(err);
+
+            res.status(500).json({
+                success: false,
+                message: "Đã có lỗi xảy ra. Vui lòng thử lại sau."
+            });
+
+        }
+
+    }
+
+);
+
+// ==========================================
+// 4. STATIC FILES + VIEW ROUTES + START SERVER
+// ==========================================
+
+// Thư mục public
+app.use(express.static(path.join(__dirname, "public")));
+
+// Trang chủ
+app.get("/", (req, res) => {
+    res.sendFile(
+        path.join(__dirname, "public", "login", "login.html")
+    );
+});
+
+// Main page
+app.get("/main", (req, res) => {
+    res.sendFile(
+        path.join(__dirname, "public", "mainpage", "mainpage.html")
+    );
+});
+
+// Redirect
+app.get("/mainpage", (req, res) => {
+    res.redirect("/main");
+});
+
+// Health Check
+app.get("/api/health", (req, res) => {
+    res.json({
+        success: true,
+        message: "Family Tree API Running",
+        time: new Date()
+    });
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+
+    console.error(err.stack);
+
+    res.status(500).json({
+        success: false,
+        message: "Internal Server Error"
+    });
+
+});
+// 404
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        message: "API Not Found"
+    });
+});
 // START SERVER
-// ==========================================
 app.listen(PORT, () => {
-  console.log(`Server is now running on http://localhost:${PORT}`);
+
+    console.log("====================================");
+    console.log(`Server running at http://localhost:${PORT}`);
+    console.log("====================================");
+
 });

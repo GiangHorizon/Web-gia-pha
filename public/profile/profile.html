@@ -24,37 +24,37 @@
 
         <nav id="sidebar-nav" class="p-4 space-y-2">
           <a
-            href="/public/mainpage/index.html"
+            href="/mainpage/mainpage.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100"
           >
             <i class="fas fa-house"></i> Home
           </a>
           <a
-            href="/public/list/member.html"
+            href="/list/member.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100"
           >
             <i class="fas fa-users"></i> Members
           </a>
           <a
-            href="/public/relationships/relationships.html"
+            href="/relationships/relationships.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100"
           >
             <i class="fas fa-link"></i> Relationships
           </a>
           <a
-            href="/public/statistics/statistics.html"
+            href="/statistics/statistics.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100"
           >
             <i class="fas fa-chart-column"></i> Statistics
           </a>
           <a
-            href="/public/documents/documents.html"
+            href="/documents/documents.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100"
           >
             <i class="fas fa-file"></i> Documents
           </a>
           <a
-            href="/public/settings/settings.html"
+            href="/settings/settings.html"
             class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100"
           >
             <i class="fas fa-gear"></i> Settings
@@ -112,13 +112,13 @@
                 </div>
                 <div class="p-1 border-b border-gray-100">
                   <a
-                    href="/public/profile/profile.html"
+                    href="/profile/profile.html"
                     class="flex items-center gap-3 px-3 py-2 text-sm text-blue-600 bg-slate-50 rounded-xl"
                   >
                     <i class="fas fa-id-card w-4 text-center"></i> Profile
                   </a>
                   <a
-                    href="/public/dashboard/dashboard.html"
+                    href="#" onclick="alert('Trang Dashboard đang được phát triển.'); return false;"
                     class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-slate-50 rounded-xl"
                   >
                     <i class="fas fa-sliders w-4 text-center"></i> Dashboard
@@ -126,7 +126,7 @@
                 </div>
                 <div class="p-1">
                   <a
-                    href="/logout"
+                    href="#" onclick="logout(); return false;"
                     class="flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl"
                   >
                     <i class="fas fa-right-from-bracket w-4 text-center"></i>
@@ -327,6 +327,8 @@
       </main>
     </div>
 
+    <script src="/http.js"></script>
     <script src="profile.js"></script>
+    <script src="/role-guard.js"></script>
   </body>
 </html>

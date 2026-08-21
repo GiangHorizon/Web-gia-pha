@@ -17,23 +17,23 @@
     </div>
 
     <nav id="sidebar-nav" class="p-4 space-y-2">
-      <a href="/public/mainpage/index.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
+      <a href="/mainpage/mainpage.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
         <i class="fas fa-house"></i> Home
       </a>
-      <a href="/public/list/member.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
+      <a href="/list/member.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
         <i class="fas fa-users"></i> Members
       </a>
-      <a href="/public/relationships/relationships.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
+      <a href="/relationships/relationships.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
         <i class="fas fa-link"></i> Relationships
       </a>
-      <a href="/public/statistics/statistics.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
+      <a href="/statistics/statistics.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
         <i class="fas fa-chart-column"></i> Statistics
       </a>
       <!-- Active mục Documents bằng class màu xanh giống Home mẫu -->
-      <a href="/public/documents/documents.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 text-blue-600 font-medium">
+      <a href="/documents/documents.html" class="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 text-blue-600 font-medium">
         <i class="fas fa-file"></i> Documents
       </a>
-      <a href="/public/settings/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
+      <a href="/settings/settings.html" class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-gray-100">
         <i class="fas fa-gear"></i> Settings
       </a>
     </nav>
@@ -58,30 +58,27 @@
             <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-600">
               <i class="fas fa-user-shield"></i>
             </div>
-            <span class="font-medium text-gray-700">Admin</span>
+            <span id="user-name" class="font-medium text-gray-700"></span>
             <i class="fas fa-chevron-down text-xs text-gray-400 ml-1"></i>
           </button>
 
           <div id="adminDropdownMenu" class="hidden absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 py-2 animate-fade-in">
             <div class="px-4 py-2 border-b border-gray-100">
               <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">Account</p>
-              <p class="text-sm font-semibold text-gray-800 truncate">Nguyễn Trường Giang</p>
+              <p id="dropdown-name" class="text-sm font-semibold text-gray-800 truncate"></p>
+              <p id="dropdown-role" class="text-xs text-gray-500"></p>
             </div>
             
             <div class="p-1 border-b border-gray-100">
-              <a href="/public/profile/profile.html" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors">
+              <a id="menu-profile" href="/profile/profile.html" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors">
                 <i class="fas fa-id-card w-4 text-center text-gray-400"></i> Profile
               </a>
-              <a href="/public/dashboard/dashboard.html" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors">
+              <a id="menu-dashboard" href="#" onclick="alert('Trang Dashboard đang được phát triển.'); return false;" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors">
                 <i class="fas fa-sliders w-4 text-center text-gray-400"></i> Dashboard
-              </a>
-              <a href="/public/security/security.html" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors">
-                <i class="fas fa-shield-halved w-4 text-center text-gray-400"></i> Security
-              </a>
-            </div>
+              </a>            </div>
 
             <div class="p-1">
-              <a href="/logout" class="flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+              <a href="#" id="logout-btn" onclick="logout()" class="flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors">
                 <i class="fas fa-right-from-bracket w-4 text-center"></i> Logout
               </a>
             </div>
@@ -234,6 +231,9 @@
   });
 </script>
 
-<script src="/public/api.js"></script>
+<script src="/http.js"></script>
+<script src="/escape-html.js"></script>
+<script src="/api.js"></script>
+<script src="/role-guard.js"></script>
 </body>
 </html>
