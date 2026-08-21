@@ -1,5 +1,19 @@
 // Admin Dropdown Toggle Logic
-const API = "http://localhost:3000";
+const API = "";  // đường dẫn tương đối — tự khớp với domain đang chạy
+
+// Chỉ Admin mới được xem trang Thống kê
+(function guardAdminOnly() {
+  try {
+    const user = JSON.parse(localStorage.getItem("user"));
+    if (!user || user.role !== "Admin") {
+      alert("Chỉ Admin mới có quyền xem trang Thống kê.");
+      window.location.href = "/mainpage/mainpage.html";
+    }
+  } catch (e) {
+    window.location.href = "/login/login.html";
+  }
+})();
+
 document.addEventListener("DOMContentLoaded", () => {
   const adminDropdownBtn = document.getElementById("adminDropdownBtn");
   const adminDropdownMenu = document.getElementById("adminDropdownMenu");
@@ -22,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
 async function fetchAndRenderStatistics() {
   try {
     // API endpoint written in server.js
-    const response = await fetch(`${API}/api/statistics`);
+    const response = await apiFetch(`${API}/api/statistics`);
     const data = await response.json();
 
     // 1. Update KPI Card numbers

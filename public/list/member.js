@@ -1,10 +1,40 @@
-const API = "http://localhost:3000";
+const API = "";  // đường dẫn tương đối — tự khớp với domain đang chạy
 
 const memberSearch = document.getElementById("memberSearch");
 const genderFilter = document.getElementById("genderFilter");
 const memberTableBody = document.getElementById("memberTableBody");
 
 let allMembers = [];
+
+// Quyền của người dùng hiện tại (lấy từ localStorage sau khi đăng nhập)
+function getCurrentUserRole() {
+  try {
+    const user = JSON.parse(localStorage.getItem("user"));
+    return user ? user.role : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function isCurrentUserAdmin() {
+  return getCurrentUserRole() === "Admin";
+}
+
+// Đóng/mở dropdown tài khoản ở góc trên bên phải
+function toggleAdminDropdown(event) {
+  event.stopPropagation();
+  const dropdown = document.getElementById("adminDropdownMenu");
+  if (dropdown) dropdown.classList.toggle("hidden");
+}
+
+window.addEventListener("click", function (e) {
+  if (!e.target.closest(".id-admin-container")) {
+    const dropdown = document.getElementById("adminDropdownMenu");
+    if (dropdown && !dropdown.classList.contains("hidden")) {
+      dropdown.classList.add("hidden");
+    }
+  }
+});
 
 // Normalize text (remove Vietnamese accents & convert to lowercase)
 function normalizeText(value = "") {
@@ -41,9 +71,9 @@ function renderMembers(members) {
         : "---";
       //Anh
       const avatarHtml = member.avatar_url
-        ? `<img src="${member.avatar_url}" alt="${member.name}" class="w-10 h-10 rounded-full object-cover border border-gray-200">`
+        ? `<img src="${escapeHtml(member.avatar_url)}" alt="${escapeHtml(member.name)}" class="w-10 h-10 rounded-full object-cover border border-gray-200">`
         : `<div class="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs uppercase border border-blue-200">
-            ${member.name ? member.name.split(" ").pop().charAt(0) : "?"}
+            ${member.name ? escapeHtml(member.name.split(" ").pop().charAt(0)) : "?"}
            </div>`;
 
       // Sap xep thu tu
@@ -56,7 +86,7 @@ function renderMembers(members) {
           
           <!-- 2. Full Name -->
           <td class="p-3 font-medium text-gray-800 align-middle">
-          <div class="font-semibold">${member.name}</div>
+          <div class="font-semibold">${escapeHtml(member.name)}</div>
           ${
           member.role === "Admin"
           ? `<span class="text-[10px] font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full uppercase">Admin</span>`
@@ -68,7 +98,7 @@ function renderMembers(members) {
           
           <!-- 3. Gender -->
           <td class="p-3 align-middle text-gray-600">
-            ${member.gender || "Unknown"}
+            ${escapeHtml(member.gender) || "Unknown"}
           </td>
           
           <!-- 4. Date of Birth -->
@@ -83,12 +113,12 @@ function renderMembers(members) {
           
           <!-- 6. Father -->
           <td class="p-3 align-middle text-gray-600">
-            ${member.father_name || "---"}
+            ${escapeHtml(member.father_name) || "---"}
           </td>
           
           <!-- 7. Mother -->
           <td class="p-3 align-middle text-gray-600">
-            ${member.mother_name || "---"}
+            ${escapeHtml(member.mother_name) || "---"}
           </td>
           
           <!-- 8. Actions -->
@@ -98,6 +128,7 @@ function renderMembers(members) {
                class="inline-block p-2 text-gray-500 hover:text-blue-600 transition-colors">
               <i class="fas fa-eye text-base"></i>
             </a>
+            ${isCurrentUserAdmin() ? `
             <button onclick="editMember(${member.id})" 
                     title="Edit"
                     class="inline-block p-2 ml-1 text-gray-500 hover:text-green-600 transition-colors">
@@ -108,6 +139,7 @@ function renderMembers(members) {
                     class="inline-block p-2 ml-1 text-gray-500 hover:text-red-600 transition-colors">
               <i class="fas fa-trash text-base"></i>
             </button>
+            ` : ``}
           </td>
         </tr>
       `;
@@ -149,7 +181,7 @@ async function loadMembers() {
         </td>
       </tr>`;
 
-    const response = await fetch(`${API}/api/members`);
+    const response = await apiFetch(`${API}/api/members`);
 
     if (!response.ok) throw new Error("Server error");
 
@@ -174,14 +206,40 @@ async function loadMembers() {
 
 // Helper functions for Edit & Delete buttons
 window.editMember = function (id) {
-  window.location.href = `editMember.html?id=${id}`;
+  if (!isCurrentUserAdmin()) {
+    alert("Chỉ Admin mới có quyền chỉnh sửa thành viên.");
+    return;
+  }
+  window.location.href = `information.html?id=${id}`;
 };
 
-window.deleteMember = function (id) {
-  if (confirm(`Are you sure you want to delete member with ID ${id}?`)) {
-    // TODO: Call delete API later
-    alert(`Deleting member ID: ${id}...`);
+window.deleteMember = async function (id) {
+  if (!isCurrentUserAdmin()) {
+    alert("Chỉ Admin mới có quyền xóa thành viên.");
+    return;
+  }
+
+  if (!confirm(`Are you sure you want to delete member with ID ${id}?`)) {
+    return;
+  }
+
+  try {
+    const response = await apiFetch(`${API}/api/members/${id}`, {
+      method: "DELETE"
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(data.message || "Xóa thành viên thất bại.");
+    }
+
+    alert("Đã xóa thành viên thành công!");
     loadMembers(); // Reload after deletion
+
+  } catch (error) {
+    console.error(error);
+    alert(error.message);
   }
 };
 
@@ -192,6 +250,12 @@ document.addEventListener("DOMContentLoaded", () => {
     genderFilter.addEventListener("change", applyFilters);
 
     loadMembers();
+  }
+
+  // Chỉ Admin mới thấy nút "Add Member"
+  const addMemberBtn = document.getElementById("addMemberBtn");
+  if (addMemberBtn && !isCurrentUserAdmin()) {
+    addMemberBtn.style.display = "none";
   }
 });
 // Show and hide

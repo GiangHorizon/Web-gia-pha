@@ -1,4 +1,4 @@
-const API = "http://localhost:3000";
+const API = "";  // đường dẫn tương đối — tự khớp với domain đang chạy
 
 // Lấy id từ URL query string (?id=X)
 const urlParams = new URLSearchParams(window.location.search);

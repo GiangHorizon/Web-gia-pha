@@ -1,4 +1,4 @@
-const API = "http://localhost:3000";
+const API = "";  // đường dẫn tương đối — tự khớp với domain đang chạy
 
 function isCurrentUserAdmin() {
   const user = getCurrentUser(); // định nghĩa sẵn trong api.js

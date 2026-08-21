@@ -1,64 +1,88 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LOGIN</title>
-    <link rel="stylesheet" href="/public/lg.css" />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
-    />
-  </head>
 
-  <body>
-    <div class="auth-wrapper">
-      <div class="auth-container">
+    <link rel="stylesheet" href="../lg.css">
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+</head>
+
+<body>
+
+<div class="auth-wrapper">
+
+    <div class="auth-container">
+
         <h2>Log in</h2>
 
-        <form>
-          <div class="input-group">
-            <input
-              id="username"
-              type="text"
-              placeholder="Email address"
-              required
-            />
-          </div>
-          <div class="input-group">
-            <input
-              id="password"
-              type="password"
-              placeholder="Password"
-              required
-            />
-          </div>
-          <button onclick="login()" type="button" class="btn-auth btn-blue">
-            Log in
-          </button>
+        <form id="loginForm">
+
+            <div class="input-group">
+                <input
+                    id="username"
+                    type="text"
+                    placeholder="Username"
+                    autocomplete="username"
+                    required
+                >
+            </div>
+
+            <div class="input-group">
+                <input
+                    id="password"
+                    type="password"
+                    placeholder="Password"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
+
+            <button
+                type="submit"
+                class="btn-auth btn-blue"
+            >
+                Log in
+            </button>
+
         </form>
 
         <p class="footer-text">
-          Don't have an account?
-          <a href="/public/register/signup.html">Sign up here</a>
+            Don't have an account?
+            <a href="../register/signup.html">Sign up here</a>
         </p>
 
         <div class="divider">
-          <span>or</span>
+            <span>or</span>
         </div>
 
         <button class="btn-social btn-google">
-          <i class="fa-brands fa-google"></i> Log in with Google
+            <i class="fab fa-google"></i>
+            Log in with Google
         </button>
-        <button class="btn-social btn-facebook">
-          <i class="fa-brands fa-facebook"></i> Log in with Facebook
-        </button>
-      </div>
-    </div>
-    <button id="nut-len-dau">
-      <i class="fa-solid fa-chevron-up"></i>
-    </button>
 
-    <script src="/public/api.js"></script>
-  </body>
+        <button class="btn-social btn-facebook">
+            <i class="fab fa-facebook"></i>
+            Log in with Facebook
+        </button>
+
+    </div>
+
+</div>
+
+<button id="nut-len-dau">
+    <i class="fas fa-chevron-up"></i>
+</button>
+
+<script src="../api.js"></script>
+
+<!-- Login -->
+<script src="login.js"></script>
+
+</body>
 </html>

@@ -1,4 +1,4 @@
-const API = 'http://localhost:3000';
+const API = '';  // đường dẫn tương đối — tự khớp với domain đang chạy
 
 // Chặn truy cập trực tiếp nếu không phải Admin
 (function guardAdminOnly() {

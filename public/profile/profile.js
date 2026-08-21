@@ -1,5 +1,15 @@
 const API_PROFILE_URL = '/api/user/profile';
 
+async function logout() {
+  try {
+    await apiFetch('/api/logout', { method: 'POST' });
+  } catch (err) {
+    console.error(err);
+  }
+  localStorage.removeItem('user');
+  window.location.href = '/login/login.html';
+}
+
 function toggleAdminDropdown(event) {
     event.stopPropagation();
     const dropdown = document.getElementById('adminDropdownMenu');
@@ -8,9 +18,8 @@ function toggleAdminDropdown(event) {
   
 async function loadProfileData() {
   try {
-    const response = await fetch(API_PROFILE_URL, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
+    const response = await apiFetch(API_PROFILE_URL, {
+      method: 'GET'
     });
     
     if (!response.ok) throw new Error('Không thể fetch dữ liệu từ PostgreSQL.');
@@ -71,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
       };
 
       try {
-        const response = await fetch(API_PROFILE_URL, {
+        const response = await apiFetch(API_PROFILE_URL, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updatedData)

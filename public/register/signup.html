@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SIGNUP</title>
-    <link rel="stylesheet" href="/public/lg.css">
+    <link rel="stylesheet" href="/lg.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
@@ -15,7 +15,7 @@
         <div class="auth-container">
             <h2>Sign up</h2>        
 
-            <form >
+            <form id="signupForm">
                 <div class="input-group">
                     <input id="name" type="text" placeholder="Full name" required>
                 </div>
@@ -31,7 +31,7 @@
                 <div class="input-group">
                     <input id="confirmPassword" type="password" placeholder="Confirm password" required>
                 </div>
-                <button onclick="register()" type="button" class="btn-auth btn-green">Sign up</button>
+                <button type="submit" class="btn-auth btn-green">Sign up</button>
             </form>
 
             <p class="footer-text">Already have an account? <a href="../login/login.html">Log in</a></p>
@@ -41,7 +41,7 @@
         <i class="fa-solid fa-chevron-up"></i>
     </button>
    
-    <script src="/public/api.js"></script>
+    <script src="/api.js"></script>
 
 </body>
 
