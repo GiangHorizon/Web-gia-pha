@@ -6,7 +6,7 @@ const bcrypt = require("bcrypt"); // Sử dụng để mã hóa password trướ
 const path = require("path");
 const jwt = require("jsonwebtoken"); // Sử dụng để tạo token xác thực người dùng
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const authenticateToken = require("./public/middleware/auth.js"); // Middleware xác thực token
 
 // ==========================================
@@ -614,7 +614,6 @@ app.put('/api/user/profile', async (req, res) => {
   }
 });
 
-// GET /api/me - Lấy thông tin người dùng đang đăng nhập
 
 // Cấu hình các thư mục tĩnh chứa file giao diện (HTML, CSS, JS công khai)
 app.use(express.static(path.join(__dirname, "public")));
