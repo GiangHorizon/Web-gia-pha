@@ -628,6 +628,9 @@ app.get("/main", (req, res) => {
 app.get("/mainpage", (req, res) => {
   res.redirect("/main");
 });
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public','mainpage', 'index.html'));
+});
 // ==========================================
 // START SERVER
 // ==========================================
