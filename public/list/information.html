@@ -11,14 +11,44 @@
 
     <div class="max-w-5xl mx-auto p-6">
         
-        <!-- Nút Quay Lại & Đăng xuất -->
+        <!-- Nút Quay Lại & Dropdown tài khoản -->
         <div class="flex items-center justify-between mb-6">
             <a href="member.html" class="inline-flex items-center text-gray-600 hover:text-blue-600 transition-colors">
                 <i class="fas fa-arrow-left mr-2"></i> Quay lại
             </a>
-            <a href="#" onclick="logout(); return false;" class="inline-flex items-center text-red-600 hover:text-red-700 text-sm font-medium transition-colors">
-                <i class="fas fa-right-from-bracket mr-2"></i> Đăng xuất
-            </a>
+
+            <div class="relative id-admin-container">
+                <button onclick="toggleAdminDropdown(event)" class="flex items-center gap-2 hover:bg-gray-100 p-1.5 rounded-xl transition-colors duration-200">
+                    <div class="w-9 h-9 rounded-full bg-gray-300 flex items-center justify-center text-gray-600">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <span id="user-name" class="font-medium text-gray-700 text-sm"></span>
+                    <i class="fas fa-chevron-down text-xs text-gray-400 ml-1"></i>
+                </button>
+
+                <div id="adminDropdownMenu" class="hidden absolute right-0 mt-2 w-56 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 py-2">
+                    <div class="px-4 py-2 border-b border-gray-100">
+                        <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">Account</p>
+                        <p id="dropdown-name" class="text-sm font-semibold text-gray-800 truncate"></p>
+                        <p id="dropdown-role" class="text-xs text-gray-500"></p>
+                    </div>
+
+                    <div class="p-1 border-b border-gray-100">
+                        <a id="menu-profile" href="/profile/profile.html" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors">
+                            <i class="fas fa-id-card w-4 text-center text-gray-400"></i> Profile
+                        </a>
+                        <a id="menu-dashboard" href="#" onclick="alert('Trang Dashboard đang được phát triển.'); return false;" class="flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors">
+                            <i class="fas fa-sliders w-4 text-center text-gray-400"></i> Dashboard
+                        </a>
+                    </div>
+
+                    <div class="p-1">
+                        <a href="#" id="logout-btn" onclick="logout()" class="flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors">
+                            <i class="fas fa-right-from-bracket w-4 text-center"></i> Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Khung Giao Diện Chính -->

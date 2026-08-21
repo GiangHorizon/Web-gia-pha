@@ -1,5 +1,33 @@
 const API = 'http://localhost:3000';
 
+// Chặn truy cập trực tiếp nếu không phải Admin
+(function guardAdminOnly() {
+  try {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (!user || user.role !== 'Admin') {
+      alert('Chỉ Admin mới có quyền thêm thành viên.');
+      window.location.href = 'member.html';
+    }
+  } catch (e) {
+    window.location.href = '../login/login.html';
+  }
+})();
+
+function toggleAdminDropdown(event) {
+  event.stopPropagation();
+  const dropdown = document.getElementById('adminDropdownMenu');
+  if (dropdown) dropdown.classList.toggle('hidden');
+}
+
+window.addEventListener('click', function (e) {
+  if (!e.target.closest('.id-admin-container')) {
+    const dropdown = document.getElementById('adminDropdownMenu');
+    if (dropdown && !dropdown.classList.contains('hidden')) {
+      dropdown.classList.add('hidden');
+    }
+  }
+});
+
 document.getElementById('addMemberForm').addEventListener('submit', async function(e) {
     e.preventDefault();
 
@@ -24,9 +52,11 @@ document.getElementById('addMemberForm').addEventListener('submit', async functi
     };
 
     try {
-        const response = await fetch(`${API}/api/addmember`, {
+        const response = await apiFetch(`${API}/api/addmember`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify(newMember)
         });
 
@@ -74,7 +104,7 @@ const searchInput = document.getElementById('parent-search');
     async function fetchMembersFromDB(query) {
         try {
             // Thay đường dẫn API phù hợp với route backend của bạn
-            const response = await fetch(`${API}/api/addmember/search?q=${encodeURIComponent(query)}`);
+            const response = await apiFetch(`${API}/api/addmember/search?q=${encodeURIComponent(query)}`);
             const data = await response.json();
             
             renderResults(data);
@@ -100,12 +130,12 @@ const searchInput = document.getElementById('parent-search');
             // Xử lý thông tin hiển thị trực quan (Khớp với các cột trong ảnh)
             card.innerHTML = `
                 <div class="flex justify-between items-center">
-                    <span class="font-semibold text-sm text-gray-800">${member.name}</span>
+                    <span class="font-semibold text-sm text-gray-800">${escapeHtml(member.name)}</span>
                     <span class="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full">ID: ${member.id}</span>
                 </div>
                 <div class="text-xs text-gray-500 mt-1">
-                    <span>Năm sinh: <strong>${member.date_birth || 'Chưa rõ'}</strong></span>
-                    ${member.spouse_name ? `<span class="mx-2">|</span><span>Phối ngẫu: <strong>${member.spouse_name}</strong></span>` : ''}
+                    <span>Năm sinh: <strong>${escapeHtml(member.date_birth) || 'Chưa rõ'}</strong></span>
+                    ${member.spouse_name ? `<span class="mx-2">|</span><span>Phối ngẫu: <strong>${escapeHtml(member.spouse_name)}</strong></span>` : ''}
                 </div>
             `;
 

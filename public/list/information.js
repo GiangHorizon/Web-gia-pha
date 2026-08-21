@@ -6,6 +6,31 @@ const memberId = urlParams.get("id");
 
 let currentMemberData = null;
 
+function isCurrentUserAdmin() {
+  try {
+    const user = JSON.parse(localStorage.getItem("user"));
+    return user ? user.role === "Admin" : false;
+  } catch (e) {
+    return false;
+  }
+
+}
+
+function toggleAdminDropdown(event) {
+  event.stopPropagation();
+  const dropdown = document.getElementById("adminDropdownMenu");
+  if (dropdown) dropdown.classList.toggle("hidden");
+}
+
+window.addEventListener("click", function (e) {
+  if (!e.target.closest(".id-admin-container")) {
+    const dropdown = document.getElementById("adminDropdownMenu");
+    if (dropdown && !dropdown.classList.contains("hidden")) {
+      dropdown.classList.add("hidden");
+    }
+  }
+});
+
 // Tải dữ liệu từ database khi mở trang
 async function loadMemberDetail() {
   if (!memberId) {
@@ -14,7 +39,7 @@ async function loadMemberDetail() {
   }
 
   try {
-    const response = await fetch(`${API}/api/members/${memberId}`);
+    const response = await apiFetch(`${API}/api/members/${memberId}`);
     if (!response.ok) throw new Error("Thành viên không tồn tại");
 
     const member = await response.json();
@@ -53,8 +78,8 @@ async function loadMemberDetail() {
     // Thiết lập Avatar dựa trên ký tự đầu của Tên
     const firstLetter = member.name ? member.name.split(" ").pop().charAt(0) : "?";
     document.getElementById("avatarContainer").innerHTML = member.avatar_url
-      ? `<img src="${member.avatar_url}" class="w-24 h-24 rounded-full object-cover border">`
-      : `<div class="w-24 h-24 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-4xl font-bold border border-blue-200 uppercase">${firstLetter}</div>`;
+      ? `<img src="${escapeHtml(member.avatar_url)}" class="w-24 h-24 rounded-full object-cover border">`
+      : `<div class="w-24 h-24 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-4xl font-bold border border-blue-200 uppercase">${escapeHtml(firstLetter)}</div>`;
 
     // 2. Đổ dữ liệu gia đình
     document.getElementById("fName").innerText = member.father_name || "---";
@@ -65,7 +90,7 @@ async function loadMemberDetail() {
     const childrenList = document.getElementById("childrenList");
     if (member.children && member.children.length > 0) {
       childrenList.innerHTML = member.children
-        .map(child => `<li><a href="information.html?id=${child.id}" class="text-blue-600 hover:underline">${child.name}</a></li>`)
+        .map(child => `<li><a href="information.html?id=${child.id}" class="text-blue-600 hover:underline">${escapeHtml(child.name)}</a></li>`)
         .join("");
     } else {
       childrenList.innerHTML = "<li>Không có dữ liệu</li>";
@@ -76,6 +101,12 @@ async function loadMemberDetail() {
     document.getElementById("selectGender").value = member.gender_text;
     document.getElementById("inputGmail").value = member.gmail || "";
     document.getElementById("inputNote").value = member.note || "";
+
+    // Chỉ Admin mới thấy nút chuyển sang chế độ chỉnh sửa
+    const editToggleBtn = document.getElementById("editToggleBtn");
+    if (editToggleBtn && !isCurrentUserAdmin()) {
+      editToggleBtn.style.display = "none";
+    }
 
   } catch (error) {
     console.error("Lỗi tải thông tin:", error);
@@ -101,6 +132,11 @@ function toggleEditMode(isEdit) {
 async function saveInformation(event) {
   event.preventDefault();
 
+  if (!isCurrentUserAdmin()) {
+    alert("Chỉ Admin mới có quyền chỉnh sửa thành viên.");
+    return;
+  }
+
   const payload = {
     name: document.getElementById("inputName").value.trim(),
     gender: document.getElementById("selectGender").value,
@@ -115,9 +151,11 @@ async function saveInformation(event) {
   }
 
   try {
-    const response = await fetch(`${API}/api/members/${memberId}`, {
+    const response = await apiFetch(`${API}/api/members/${memberId}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify(payload)
     });
 
