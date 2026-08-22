@@ -4,7 +4,7 @@ const memberSearch = document.getElementById("memberSearch");
 const genderFilter = document.getElementById("genderFilter");
 const memberTableBody = document.getElementById("memberTableBody");
 
-let allMembers = [];
+let memberListData = [];
 
 // Quyền của người dùng hiện tại (lấy từ localStorage sau khi đăng nhập)
 function getCurrentUserRole() {
@@ -154,7 +154,7 @@ function applyFilters() {
   const query = normalizeText(memberSearch.value.trim());
   const gender = genderFilter.value;
 
-  const filtered = allMembers.filter((member) => {
+  const filtered = memberListData.filter((member) => {
     const matchesSearch =
       !query ||
       normalizeText(member.name).includes(query) ||
@@ -185,9 +185,9 @@ async function loadMembers() {
 
     if (!response.ok) throw new Error("Server error");
 
-    allMembers = await response.json();
+    memberListData = await response.json();
 
-    renderMembers(allMembers);
+    renderMembers(memberListData);
     applyFilters();
   } catch (error) {
     console.error(error);

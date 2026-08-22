@@ -1,4 +1,5 @@
-const API_URL = "";  // đường dẫn tương đối — tự khớp với domain đang chạy
+// API_URL đã được khai báo sẵn ở api.js (nạp trước file này) — dùng chung,
+// không khai báo lại để tránh lỗi "already been declared".
 
 async function login() {
 
