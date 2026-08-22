@@ -59,6 +59,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // ======================
     // Phân quyền
     // ======================
+    // Lưu ý: Relationships giờ là tính năng xem được với mọi role (chỉ
+    // thêm/sửa/xóa mới yêu cầu Admin, được tự xử lý bên trong trang đó),
+    // nên không ẩn link này nữa. Settings/Statistics/Dashboard vẫn chỉ
+    // dành cho Admin — đã được ẩn đồng bộ ở role-guard.js cho MỌI trang,
+    // nên khối bên dưới thực chất dư thừa nhưng giữ lại cũng vô hại.
 
     if (user.role === "Member") {
 
@@ -69,9 +74,6 @@ document.addEventListener("DOMContentLoaded", () => {
             ?.classList.add("hidden");
 
         document.getElementById("menu-dashboard")
-            ?.classList.add("hidden");
-
-        document.getElementById("menu-relationship")
             ?.classList.add("hidden");
     }
 
