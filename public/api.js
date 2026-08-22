@@ -193,9 +193,11 @@ async function fetchAndRenderTree(generation, keyword = '') {
       }));
 
     allMembers = members;
+    const linkDataArray = data.linkDataArray || [];
     
     // Lọc danh sách theo từ khóa tìm kiếm
     const filteredMembers = filterMembers(members, keyword);
+    const filteredIds = new Set(filteredMembers.map(m => m.id));
     
     // Kiểm tra nếu không có thành viên nào khớp (Lúc này filteredMembers đã là một Array chuẩn)
     if (!filteredMembers.length) {
@@ -214,6 +216,8 @@ async function fetchAndRenderTree(generation, keyword = '') {
 
     let htmlContent = `
       <div class="bg-slate-50 h-[700px] relative p-10 overflow-auto">
+        <div id="tree-inner" class="relative">
+          <svg id="tree-lines" class="absolute inset-0 pointer-events-none" style="z-index: 0;"></svg>
     `;
 
     Object.keys(groupedByGen).forEach((genKey, index) => {
@@ -232,7 +236,7 @@ async function fetchAndRenderTree(generation, keyword = '') {
             : "Chưa cập nhật";
 
         htmlContent += `
-          <div class="bg-white shadow rounded-2xl w-64 p-4 text-center border border-gray-100 z-10">
+          <div data-member-id="${member.id}" class="relative bg-white shadow rounded-2xl w-64 p-4 text-center border border-gray-100 z-10">
             <h3 class="font-bold text-lg text-slate-800">${escapeHtml(member.name)}</h3>
             <p class="text-slate-500 text-sm">${escapeHtml(lifespan)}</p>
           </div>
@@ -243,6 +247,11 @@ async function fetchAndRenderTree(generation, keyword = '') {
     });
 
     htmlContent += `
+        </div>
+        <div class="absolute bottom-6 left-6 bg-white border rounded-xl shadow-sm p-3 text-xs text-slate-600 z-20 space-y-1.5">
+          <div class="flex items-center gap-2"><span class="inline-block w-6 h-0.5 bg-red-400"></span> Vợ / chồng</div>
+          <div class="flex items-center gap-2"><span class="inline-block w-6 h-0.5 bg-slate-400"></span> Cha/mẹ &rarr; con</div>
+        </div>
         <div class="absolute bottom-6 right-6 w-40 h-40 border rounded-xl bg-white flex items-center justify-center text-gray-400 shadow-sm z-20">
           Mini Map
         </div>
@@ -252,6 +261,12 @@ async function fetchAndRenderTree(generation, keyword = '') {
     // Đổ HTML vào container
     container.innerHTML = htmlContent;
 
+    // Vẽ đường nối vợ/chồng - cha/mẹ/con sau khi DOM đã render xong
+    // (cần layout thật để đo đúng vị trí từng thẻ)
+    requestAnimationFrame(() => {
+      drawTreeLines(linkDataArray, filteredIds);
+    });
+
   } catch (error) {
     console.error("Failed to load family tree:", error);
     container.innerHTML = `
@@ -259,6 +274,82 @@ async function fetchAndRenderTree(generation, keyword = '') {
         Can't load family tree. Please try again later.
       </div>`;
   }
+}
+
+// Vẽ đường nối quan hệ (vợ/chồng, cha/mẹ - con) bằng SVG chồng lên các thẻ thành viên
+function drawTreeLines(linkDataArray, visibleIds) {
+  const inner = document.getElementById("tree-inner");
+  const svg = document.getElementById("tree-lines");
+  if (!inner || !svg) return;
+
+  // SVG phủ đúng kích thước toàn bộ nội dung cây (kể cả phần cuộn được)
+  const width = inner.scrollWidth;
+  const height = inner.scrollHeight;
+  svg.setAttribute("width", width);
+  svg.setAttribute("height", height);
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+
+  function getAnchor(memberId) {
+    const el = inner.querySelector(`[data-member-id="${memberId}"]`);
+    if (!el) return null;
+    // Dùng offset* (tọa độ layout thô) thay vì getBoundingClientRect(), vì
+    // getBoundingClientRect() phản ánh cả CSS transform: scale() của chức
+    // năng Zoom trên #tree-container — nếu dùng sẽ làm đường nối lệch vị
+    // trí mỗi khi người dùng zoom in/out. offsetLeft/offsetTop tính theo
+    // offsetParent gần nhất (#tree-inner) và không bị ảnh hưởng bởi scale.
+    const x = el.offsetLeft;
+    const y = el.offsetTop;
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    return {
+      top: { x: x + w / 2, y: y },
+      bottom: { x: x + w / 2, y: y + h },
+      left: { x: x, y: y + h / 2 },
+      right: { x: x + w, y: y + h / 2 }
+    };
+  }
+
+  let svgMarkup = "";
+
+  linkDataArray.forEach(link => {
+
+    // Chỉ vẽ khi cả 2 đầu đang thực sự hiển thị (không bị lọc bởi ô tìm kiếm)
+    if (!visibleIds.has(link.from) || !visibleIds.has(link.to)) return;
+
+    const fromAnchor = getAnchor(link.from);
+    const toAnchor = getAnchor(link.to);
+    if (!fromAnchor || !toAnchor) return;
+
+    if (link.category === "SPOUSE") {
+      // Vợ/chồng: nối ngang giữa 2 thẻ cùng hàng bằng đường liền, có ký hiệu ở giữa
+      const isFromLeft = fromAnchor.right.x < toAnchor.left.x;
+      const p1 = isFromLeft ? fromAnchor.right : fromAnchor.left;
+      const p2 = isFromLeft ? toAnchor.left : toAnchor.right;
+      const midX = (p1.x + p2.x) / 2;
+      const midY = (p1.y + p2.y) / 2;
+
+      svgMarkup += `
+        <line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}"
+              stroke="#f87171" stroke-width="2" />
+        <circle cx="${midX}" cy="${midY}" r="4" fill="#f87171" />
+      `;
+    }
+
+    if (link.category === "CHILD") {
+      // Cha/mẹ - con: đường cong nhẹ từ đáy thẻ cha/mẹ xuống đỉnh thẻ con
+      const p1 = fromAnchor.bottom;
+      const p2 = toAnchor.top;
+      const midY = (p1.y + p2.y) / 2;
+
+      svgMarkup += `
+        <path d="M ${p1.x} ${p1.y} C ${p1.x} ${midY}, ${p2.x} ${midY}, ${p2.x} ${p2.y}"
+              stroke="#94a3b8" stroke-width="2" fill="none" />
+      `;
+    }
+
+  });
+
+  svg.innerHTML = svgMarkup;
 }
 
 // ==========================================

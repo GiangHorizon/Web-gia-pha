@@ -1002,51 +1002,11 @@ app.get(
 
             members.forEach(member => {
 
-                if (
-                    member.father_id &&
-                    member.mother_id
-                ) {
-
-                    const marriageKey =
-                        `marriage_${member.father_id}_${member.mother_id}`;
-
-                    if (!marriageSet.has(marriageKey)) {
-
-                        marriageSet.add(marriageKey);
-
-                        nodeDataArray.push({
-
-                            key: marriageKey,
-
-                            category: "MARRIAGE"
-
-                        });
-
-                        linkDataArray.push({
-
-                            from: String(member.father_id),
-
-                            to: String(member.mother_id),
-
-                            category: "SPOUSE"
-
-                        });
-
-                        linkDataArray.push({
-
-                            from: String(member.father_id),
-
-                            to: marriageKey,
-
-                            category: "CHILD"
-
-                        });
-
-                    }
+                if (member.father_id) {
 
                     linkDataArray.push({
 
-                        from: marriageKey,
+                        from: String(member.father_id),
 
                         to: String(member.id),
 
@@ -1056,39 +1016,58 @@ app.get(
 
                 }
 
-                else {
+                if (member.mother_id) {
 
-                    if (member.father_id) {
+                    linkDataArray.push({
 
-                        linkDataArray.push({
+                        from: String(member.mother_id),
 
-                            from: String(member.father_id),
+                        to: String(member.id),
 
-                            to: String(member.id),
+                        category: "CHILD"
 
-                            category: "CHILD"
-
-                        });
-
-                    }
-
-                    if (member.mother_id) {
-
-                        linkDataArray.push({
-
-                            from: String(member.mother_id),
-
-                            to: String(member.id),
-
-                            category: "CHILD"
-
-                        });
-
-                    }
+                    });
 
                 }
 
             });
+
+            // Vợ/chồng: lấy trực tiếp từ bảng marriages (không chỉ suy đoán
+            // qua con chung) — để các cặp chưa có con vẫn được nối trên cây.
+            const memberIds = members.map(m => m.id);
+
+            if (memberIds.length > 0) {
+
+                const marriagesResult = await pool.query(
+                    `
+                    SELECT spouse1_id, spouse2_id
+                    FROM marriages
+                    WHERE spouse1_id = ANY($1)
+                      AND spouse2_id = ANY($1)
+                    `,
+                    [memberIds]
+                );
+
+                marriagesResult.rows.forEach(row => {
+
+                    const key1 = `marriage_${row.spouse1_id}_${row.spouse2_id}`;
+                    const key2 = `marriage_${row.spouse2_id}_${row.spouse1_id}`;
+
+                    if (!marriageSet.has(key1) && !marriageSet.has(key2)) {
+
+                        marriageSet.add(key1);
+
+                        linkDataArray.push({
+                            from: String(row.spouse1_id),
+                            to: String(row.spouse2_id),
+                            category: "SPOUSE"
+                        });
+
+                    }
+
+                });
+
+            }
 
             res.json({
 
